@@ -62,9 +62,17 @@ builder.Services.AddSingleton(provider =>
 
 // Application services
 builder.Services.AddScoped<IEventService, EventService>();
+builder.Services.AddScoped<IDeviceService, DeviceService>();
+builder.Services.AddScoped<IFungaService, FungaService>();
+builder.Services.AddScoped<IMycosoftIntegrationService, MycosoftIntegrationService>();
+
+// HTTP client for external services
+builder.Services.AddHttpClient<FungaService>();
+builder.Services.AddHttpClient<MycosoftIntegrationService>();
 
 // Health checks
-builder.Services.AddHealthChecks();
+builder.Services.AddHealthChecks()
+    .AddCosmosDb(builder.Configuration.GetConnectionString("CosmosDb") ?? "");
 
 // Application Insights
 builder.Services.AddApplicationInsightsTelemetry();

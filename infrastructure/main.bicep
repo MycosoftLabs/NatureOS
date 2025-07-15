@@ -369,6 +369,404 @@ resource apiManagement 'Microsoft.ApiManagement/service@2023-05-01-preview' = {
   }
 }
 
+// App Service Plan
+resource appServicePlan 'Microsoft.Web/serverfarms@2023-01-01' = {
+  name: '${namePrefix}-asp-${uniqueSuffix}'
+  location: location
+  tags: tags
+  sku: {
+    name: 'B1'
+    tier: 'Basic'
+    size: 'B1'
+    family: 'B'
+    capacity: 1
+  }
+  properties: {
+    perSiteScaling: false
+    elasticScaleEnabled: false
+    maximumElasticWorkerCount: 1
+    isSpot: false
+    reserved: false
+    isXenon: false
+    hyperV: false
+    targetWorkerCount: 0
+    targetWorkerSizeId: 0
+    zoneRedundant: false
+  }
+}
+
+// Core API Web App
+resource coreApiWebApp 'Microsoft.Web/sites@2023-01-01' = {
+  name: '${namePrefix}-coreapi-${uniqueSuffix}'
+  location: location
+  tags: tags
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: appServicePlan.id
+    httpsOnly: true
+    siteConfig: {
+      netFrameworkVersion: 'v8.0'
+      scmType: 'None'
+      use32BitWorkerProcess: false
+      alwaysOn: true
+      managedPipelineMode: 'Integrated'
+      virtualApplications: [
+        {
+          virtualPath: '/'
+          physicalPath: 'site\\wwwroot'
+          preloadEnabled: true
+        }
+      ]
+      loadBalancing: 'LeastRequests'
+      experiments: {
+        rampUpRules: []
+      }
+      autoHealEnabled: false
+      vnetRouteAllEnabled: false
+      vnetPrivatePortsCount: 0
+      localMySqlEnabled: false
+      ipSecurityRestrictions: [
+        {
+          ipAddress: 'Any'
+          action: 'Allow'
+          priority: 2147483647
+          name: 'Allow all'
+          description: 'Allow all access'
+        }
+      ]
+      scmIpSecurityRestrictions: [
+        {
+          ipAddress: 'Any'
+          action: 'Allow'
+          priority: 2147483647
+          name: 'Allow all'
+          description: 'Allow all access'
+        }
+      ]
+      scmIpSecurityRestrictionsUseMain: false
+      http20Enabled: false
+      minTlsVersion: '1.2'
+      scmMinTlsVersion: '1.2'
+      ftpsState: 'FtpsOnly'
+      preWarmedInstanceCount: 0
+      functionAppScaleLimit: 0
+      functionsRuntimeScaleMonitoringEnabled: false
+      minimumElasticInstanceCount: 0
+      azureStorageAccounts: {}
+      appSettings: [
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: applicationInsights.properties.InstrumentationKey
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: applicationInsights.properties.ConnectionString
+        }
+        {
+          name: 'ApplicationInsightsAgent_EXTENSION_VERSION'
+          value: '~3'
+        }
+        {
+          name: 'XDT_MicrosoftApplicationInsights_Mode'
+          value: 'Recommended'
+        }
+        {
+          name: 'ASPNETCORE_ENVIRONMENT'
+          value: environment == 'prod' ? 'Production' : 'Development'
+        }
+        {
+          name: 'ConnectionStrings__CosmosDb'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/CosmosDbConnectionString/)'
+        }
+        {
+          name: 'ConnectionStrings__ServiceBus'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ServiceBusConnectionString/)'
+        }
+        {
+          name: 'ConnectionStrings__IoTHub'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/IoTHubConnectionString/)'
+        }
+        {
+          name: 'ConnectionStrings__EventGrid'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/EventGridConnectionString/)'
+        }
+        {
+          name: 'ConnectionStrings__Storage'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/StorageConnectionString/)'
+        }
+        {
+          name: 'AzureAd__TenantId'
+          value: subscription().tenantId
+        }
+        {
+          name: 'AzureAd__ClientId'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/AzureAdClientId/)'
+        }
+        {
+          name: 'AzureAd__ClientSecret'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/AzureAdClientSecret/)'
+        }
+        {
+          name: 'AzureAd__Authority'
+          value: 'https://login.microsoftonline.com/${subscription().tenantId}'
+        }
+        {
+          name: 'AzureAd__Audience'
+          value: 'api://natureos-core-api'
+        }
+      ]
+      connectionStrings: []
+    }
+    scmSiteAlsoStopped: false
+    clientAffinityEnabled: false
+    clientCertEnabled: false
+    clientCertMode: 'Required'
+    hostNamesDisabled: false
+    containerSize: 0
+    dailyMemoryTimeQuota: 0
+    httpsOnly: true
+    redundancyMode: 'None'
+    storageAccountRequired: false
+    keyVaultReferenceIdentity: 'SystemAssigned'
+  }
+}
+
+// Assign Key Vault access to Web App
+resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-01' = {
+  parent: keyVault
+  name: 'add'
+  properties: {
+    accessPolicies: [
+      {
+        tenantId: subscription().tenantId
+        objectId: coreApiWebApp.identity.principalId
+        permissions: {
+          secrets: ['Get']
+          certificates: ['Get']
+        }
+      }
+    ]
+  }
+}
+
+// Store secrets in Key Vault
+resource cosmosDbConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'CosmosDbConnectionString'
+  properties: {
+    value: cosmosDbAccount.listConnectionStrings().connectionStrings[0].connectionString
+  }
+}
+
+resource serviceBusConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'ServiceBusConnectionString'
+  properties: {
+    value: serviceBusNamespace.listKeys().value[0].connectionString
+  }
+}
+
+resource iotHubConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'IoTHubConnectionString'
+  properties: {
+    value: iotHub.listKeys().value[0].connectionString
+  }
+}
+
+resource eventGridConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'EventGridConnectionString'
+  properties: {
+    value: eventGridTopic.listKeys().key1
+  }
+}
+
+resource storageConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'StorageConnectionString'
+  properties: {
+    value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
+  }
+}
+
+// Function App for IoT ingestion
+resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
+  name: '${namePrefix}-func-${uniqueSuffix}'
+  location: location
+  tags: tags
+  kind: 'functionapp'
+  identity: {
+    type: 'SystemAssigned'
+  }
+  properties: {
+    serverFarmId: appServicePlan.id
+    httpsOnly: true
+    siteConfig: {
+      netFrameworkVersion: 'v8.0'
+      scmType: 'None'
+      use32BitWorkerProcess: false
+      alwaysOn: true
+      managedPipelineMode: 'Integrated'
+      appSettings: [
+        {
+          name: 'AzureWebJobsStorage'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
+        }
+        {
+          name: 'WEBSITE_CONTENTAZUREFILECONNECTIONSTRING'
+          value: 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
+        }
+        {
+          name: 'WEBSITE_CONTENTSHARE'
+          value: toLower('${namePrefix}-func-${uniqueSuffix}')
+        }
+        {
+          name: 'FUNCTIONS_EXTENSION_VERSION'
+          value: '~4'
+        }
+        {
+          name: 'FUNCTIONS_WORKER_RUNTIME'
+          value: 'dotnet-isolated'
+        }
+        {
+          name: 'APPINSIGHTS_INSTRUMENTATIONKEY'
+          value: applicationInsights.properties.InstrumentationKey
+        }
+        {
+          name: 'APPLICATIONINSIGHTS_CONNECTION_STRING'
+          value: applicationInsights.properties.ConnectionString
+        }
+        {
+          name: 'CosmosDbConnectionString'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/CosmosDbConnectionString/)'
+        }
+        {
+          name: 'ServiceBusConnectionString'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/ServiceBusConnectionString/)'
+        }
+        {
+          name: 'IoTHubConnectionString'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/IoTHubConnectionString/)'
+        }
+        {
+          name: 'EventGridConnectionString'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/EventGridConnectionString/)'
+        }
+      ]
+    }
+    keyVaultReferenceIdentity: 'SystemAssigned'
+  }
+}
+
+// Assign Key Vault access to Function App
+resource functionAppKeyVaultAccess 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-01' = {
+  parent: keyVault
+  name: 'add'
+  properties: {
+    accessPolicies: [
+      {
+        tenantId: subscription().tenantId
+        objectId: functionApp.identity.principalId
+        permissions: {
+          secrets: ['Get']
+          certificates: ['Get']
+        }
+      }
+    ]
+  }
+  dependsOn: [
+    keyVaultAccessPolicy
+  ]
+}
+
+// Metric Alerts for monitoring
+resource cosmosDbRuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${namePrefix}-cosmosdb-ru-alert'
+  location: 'global'
+  tags: tags
+  properties: {
+    description: 'Alert when Cosmos DB RU consumption is high'
+    severity: 2
+    enabled: true
+    scopes: [
+      cosmosDbAccount.id
+    ]
+    evaluationFrequency: 'PT1M'
+    windowSize: 'PT5M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          name: 'HighRUConsumption'
+          metricName: 'TotalRequestUnits'
+          operator: 'GreaterThan'
+          threshold: 1000
+          timeAggregation: 'Average'
+        }
+      ]
+    }
+  }
+}
+
+resource webAppCpuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${namePrefix}-webapp-cpu-alert'
+  location: 'global'
+  tags: tags
+  properties: {
+    description: 'Alert when Web App CPU usage is high'
+    severity: 2
+    enabled: true
+    scopes: [
+      coreApiWebApp.id
+    ]
+    evaluationFrequency: 'PT1M'
+    windowSize: 'PT5M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          name: 'HighCPUUsage'
+          metricName: 'CpuPercentage'
+          operator: 'GreaterThan'
+          threshold: 80
+          timeAggregation: 'Average'
+        }
+      ]
+    }
+  }
+}
+
+resource webAppErrorAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
+  name: '${namePrefix}-webapp-error-alert'
+  location: 'global'
+  tags: tags
+  properties: {
+    description: 'Alert when Web App has high error rate'
+    severity: 1
+    enabled: true
+    scopes: [
+      coreApiWebApp.id
+    ]
+    evaluationFrequency: 'PT1M'
+    windowSize: 'PT5M'
+    criteria: {
+      'odata.type': 'Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria'
+      allOf: [
+        {
+          name: 'HighErrorRate'
+          metricName: 'Http5xx'
+          operator: 'GreaterThan'
+          threshold: 5
+          timeAggregation: 'Total'
+        }
+      ]
+    }
+  }
+}
+
 // Outputs
 output cosmosDbAccountName string = cosmosDbAccount.name
 output cosmosDbEndpoint string = cosmosDbAccount.properties.documentEndpoint
@@ -384,4 +782,11 @@ output applicationInsightsConnectionString string = applicationInsights.properti
 output containerAppsEnvironmentId string = containerAppsEnvironment.id
 output apiManagementGatewayUrl string = 'https://${apiManagement.properties.gatewayUrl}'
 output keyVaultName string = keyVault.name
+output keyVaultUri string = keyVault.properties.vaultUri
+output coreApiWebAppName string = coreApiWebApp.name
+output coreApiWebAppUrl string = 'https://${coreApiWebApp.properties.defaultHostName}'
+output functionAppName string = functionApp.name
+output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'
+output logAnalyticsWorkspaceName string = logAnalyticsWorkspace.name
+output logAnalyticsWorkspaceId string = logAnalyticsWorkspace.id
 output resourceGroupName string = resourceGroup().name 

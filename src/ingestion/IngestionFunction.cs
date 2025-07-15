@@ -1,4 +1,5 @@
 using Microsoft.Azure.Functions.Worker;
+using Microsoft.Azure.Functions.Worker.Http;
 using Microsoft.Extensions.Logging;
 using Microsoft.Azure.Cosmos;
 using Azure.Messaging.EventGrid;
@@ -37,40 +38,43 @@ public class IngestionFunction
     /// <param name="context">Function context</param>
     [Function("ProcessIoTMessage")]
     public async Task ProcessIoTMessage(
-        [EventHubTrigger("messages/events", Connection = "IoTHubConnectionString")] string message,
+        [EventHubTrigger("messages/events", Connection = "IoTHubConnectionString")] string[] messages,
         FunctionContext context)
     {
         var logger = context.GetLogger("ProcessIoTMessage");
         
         try
         {
-            logger.LogInformation("Processing IoT message: {Message}", message);
+            logger.LogInformation("Processing {Count} IoT messages", messages.Length);
 
-            // Parse the IoT message
-            var iotMessage = JsonSerializer.Deserialize<IoTMessage>(message);
-            if (iotMessage == null)
+            foreach (var message in messages)
             {
-                logger.LogWarning("Failed to parse IoT message: {Message}", message);
-                return;
+                // Parse the IoT message
+                var iotMessage = JsonSerializer.Deserialize<IoTMessage>(message);
+                if (iotMessage == null)
+                {
+                    logger.LogWarning("Failed to parse IoT message: {Message}", message);
+                    continue;
+                }
+
+                // Convert to Mycorrhizae Protocol event
+                var mycorrhizaeEvent = ConvertToMycorrhizaeEvent(iotMessage);
+
+                // Store in MINDEX
+                await StoreEventAsync(mycorrhizaeEvent);
+
+                // Publish to Event Grid for downstream processing
+                await PublishEventAsync(mycorrhizaeEvent);
+
+                // Send to Mycorrhizae processing queue
+                await SendToProcessingQueueAsync(mycorrhizaeEvent);
+
+                logger.LogInformation("Successfully processed IoT message from device {DeviceId}", iotMessage.DeviceId);
             }
-
-            // Convert to Mycorrhizae Protocol event
-            var mycorrhizaeEvent = ConvertToMycorrhizaeEvent(iotMessage);
-
-            // Store in MINDEX
-            await StoreEventAsync(mycorrhizaeEvent);
-
-            // Publish to Event Grid for downstream processing
-            await PublishEventAsync(mycorrhizaeEvent);
-
-            // Send to Mycorrhizae processing queue
-            await SendToProcessingQueueAsync(mycorrhizaeEvent);
-
-            logger.LogInformation("Successfully processed IoT message from device {DeviceId}", iotMessage.DeviceId);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to process IoT message: {Message}", message);
+            logger.LogError(ex, "Failed to process IoT messages");
             throw; // Let Azure Functions handle retries
         }
     }
