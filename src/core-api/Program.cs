@@ -65,10 +65,12 @@ builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IFungaService, FungaService>();
 builder.Services.AddScoped<IMycosoftIntegrationService, MycosoftIntegrationService>();
+builder.Services.AddScoped<IExternalDataIntegrationService, ExternalDataIntegrationService>();
 
 // HTTP client for external services
 builder.Services.AddHttpClient<FungaService>();
 builder.Services.AddHttpClient<MycosoftIntegrationService>();
+builder.Services.AddHttpClient<ExternalDataIntegrationService>();
 
 // Health checks
 builder.Services.AddHealthChecks()
