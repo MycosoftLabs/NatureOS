@@ -378,7 +378,7 @@ output iotHubConnectionString string = iotHub.listKeys().value[0].connectionStri
 output eventGridTopicEndpoint string = eventGridTopic.properties.endpoint
 output serviceBusConnectionString string = serviceBusNamespace.listKeys().value[0].connectionString
 output storageAccountName string = storageAccount.name
-output storageConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${environment().suffixes.storage}'
+output storageConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
 output applicationInsightsInstrumentationKey string = applicationInsights.properties.InstrumentationKey
 output applicationInsightsConnectionString string = applicationInsights.properties.ConnectionString
 output containerAppsEnvironmentId string = containerAppsEnvironment.id

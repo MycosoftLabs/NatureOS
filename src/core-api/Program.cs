@@ -1,7 +1,6 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Cosmos;
 using Microsoft.OpenApi.Models;
-using NatureOS.CoreApi.Extensions;
 using NatureOS.CoreApi.Services;
 using System.Reflection;
 
@@ -63,13 +62,9 @@ builder.Services.AddSingleton(provider =>
 
 // Application services
 builder.Services.AddScoped<IEventService, EventService>();
-builder.Services.AddScoped<IDeviceService, DeviceService>();
-builder.Services.AddScoped<IFungaService, FungaService>();
 
 // Health checks
-builder.Services.AddHealthChecks()
-    .AddCosmosDb(builder.Configuration.GetConnectionString("CosmosDb")!)
-    .AddApplicationInsightsPublisher();
+builder.Services.AddHealthChecks();
 
 // Application Insights
 builder.Services.AddApplicationInsightsTelemetry();

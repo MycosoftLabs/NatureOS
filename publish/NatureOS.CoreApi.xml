@@ -1,0 +1,940 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>NatureOS.CoreApi</name>
+    </assembly>
+    <members>
+        <member name="T:NatureOS.CoreApi.Controllers.EventsController">
+            <summary>
+            API controller for managing Mycorrhizae Protocol events
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.EventsController.CreateEvent(NatureOS.MINDEX.Models.MycorrhizaeEvent,System.Threading.CancellationToken)">
+            <summary>
+            Create a new Mycorrhizae Protocol event
+            </summary>
+            <param name="mycorrhizaeEvent">The event to create</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>The created event</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.EventsController.GetEvent(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Get an event by ID
+            </summary>
+            <param name="eventId">Event ID</param>
+            <param name="sourceDevice">Source device ID</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>The event if found</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.EventsController.QueryEvents(System.String,System.String,System.Nullable{System.DateTime},System.Nullable{System.DateTime},System.String,System.Int32,System.String,System.String,System.Boolean,System.Boolean,System.Threading.CancellationToken)">
+            <summary>
+            Query events with filtering and pagination
+            </summary>
+            <param name="sourceDevice">Filter by source device</param>
+            <param name="kingdomDomain">Filter by kingdom domain</param>
+            <param name="startTime">Filter by start time</param>
+            <param name="endTime">Filter by end time</param>
+            <param name="tenantId">Filter by tenant ID</param>
+            <param name="pageSize">Page size (default: 50, max: 1000)</param>
+            <param name="continuationToken">Continuation token for pagination</param>
+            <param name="sortOrder">Sort order (timestamp_asc or timestamp_desc)</param>
+            <param name="includeDecodedMeaning">Include decoded meaning in results</param>
+            <param name="includeMetadata">Include metadata in results</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Paged result of events</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.EventsController.GetEventsByDevice(System.String,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get events by source device
+            </summary>
+            <param name="sourceDevice">Source device ID</param>
+            <param name="limit">Maximum number of events to return (default: 100, max: 1000)</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>List of events from the device</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.EventsController.GetEventsByDomain(System.String,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get events by kingdom domain
+            </summary>
+            <param name="kingdomDomain">Kingdom domain (e.g., FUNGA.signaling)</param>
+            <param name="limit">Maximum number of events to return (default: 100, max: 1000)</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>List of events in the domain</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.EventsController.GetEventsByTimeRange(System.DateTime,System.DateTime,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get events within a time range
+            </summary>
+            <param name="startTime">Start time (inclusive)</param>
+            <param name="endTime">End time (inclusive)</param>
+            <param name="limit">Maximum number of events to return (default: 1000)</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>List of events in the time range</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.EventsController.DeleteEvent(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Delete an event
+            </summary>
+            <param name="eventId">Event ID to delete</param>
+            <param name="sourceDevice">Source device ID</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Success status</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.EventsController.GetEventStatistics(System.String,System.String,System.Nullable{System.DateTime},System.Nullable{System.DateTime},System.String,System.Threading.CancellationToken)">
+            <summary>
+            Get event statistics and aggregations
+            </summary>
+            <param name="sourceDevice">Filter by source device</param>
+            <param name="kingdomDomain">Filter by kingdom domain</param>
+            <param name="startTime">Filter by start time</param>
+            <param name="endTime">Filter by end time</param>
+            <param name="tenantId">Filter by tenant ID</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Event statistics</returns>
+        </member>
+        <member name="T:NatureOS.CoreApi.Controllers.MycosoftController">
+            <summary>
+            API controller for Mycosoft product integrations
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.MycosoftController.ProcessMushroom1Telemetry(NatureOS.CoreApi.Services.Mushroom1Telemetry,System.Threading.CancellationToken)">
+            <summary>
+            Endpoint for Mushroom 1 device telemetry
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.MycosoftController.GetWebsiteDashboard(System.Threading.CancellationToken)">
+            <summary>
+            Get dashboard data for Mycosoft.com website
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.MycosoftController.ExecuteHplSimulation(NatureOS.CoreApi.Services.HplSimulationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Execute HPL (Hypha Programming Language) simulation
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.MycosoftController.GetLiveData(System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get live data for website components
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.MycosoftController.QueryMyca(NatureOS.CoreApi.Controllers.MycaQuery,System.Threading.CancellationToken)">
+            <summary>
+            MYCA AI Assistant endpoint
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Controllers.MycosoftController.TriggerSync(NatureOS.CoreApi.Controllers.SyncRequest,System.Threading.CancellationToken)">
+            <summary>
+            Trigger data sync with all Mycosoft services
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.EventService">
+            <summary>
+            Implementation of IEventService for managing Mycorrhizae Protocol events
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.IDeviceService">
+            <summary>
+            Service interface for managing IoT devices
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IDeviceService.RegisterDeviceAsync(NatureOS.CoreApi.Services.Device,System.Threading.CancellationToken)">
+            <summary>
+            Register a new device
+            </summary>
+            <param name="device">Device to register</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>The registered device</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IDeviceService.GetDeviceAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Get a device by ID
+            </summary>
+            <param name="deviceId">Device ID</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>The device if found</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IDeviceService.GetDevicesAsync(System.Threading.CancellationToken)">
+            <summary>
+            Get all devices
+            </summary>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>List of devices</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IDeviceService.UpdateDeviceAsync(NatureOS.CoreApi.Services.Device,System.Threading.CancellationToken)">
+            <summary>
+            Update device information
+            </summary>
+            <param name="device">Updated device information</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>The updated device</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IDeviceService.DeleteDeviceAsync(System.String,System.Threading.CancellationToken)">
+            <summary>
+            Delete a device
+            </summary>
+            <param name="deviceId">Device ID to delete</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>True if deleted successfully</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IDeviceService.GetDeviceStatisticsAsync(System.Threading.CancellationToken)">
+            <summary>
+            Get device statistics
+            </summary>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Device statistics</returns>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.Device">
+            <summary>
+            Device model
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.DeviceId">
+            <summary>
+            Device ID (EUI-64 or similar)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.Name">
+            <summary>
+            Device name
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.DeviceType">
+            <summary>
+            Device type (e.g., "mushroom-sensor", "spore-detector")
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.Location">
+            <summary>
+            Device location
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.Status">
+            <summary>
+            Device status
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.LastSeen">
+            <summary>
+            Last seen timestamp
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.TenantId">
+            <summary>
+            Tenant ID
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.Metadata">
+            <summary>
+            Device metadata
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.CreatedAt">
+            <summary>
+            Created timestamp
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.Device.UpdatedAt">
+            <summary>
+            Updated timestamp
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.DeviceStatus">
+            <summary>
+            Device status enumeration
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.DeviceStatistics">
+            <summary>
+            Device statistics
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DeviceStatistics.TotalDevices">
+            <summary>
+            Total device count
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DeviceStatistics.DevicesByStatus">
+            <summary>
+            Devices by status
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DeviceStatistics.DevicesByType">
+            <summary>
+            Devices by type
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DeviceStatistics.ActiveDevices">
+            <summary>
+            Active devices (seen in last 24 hours)
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.IEventService">
+            <summary>
+            Service interface for managing Mycorrhizae Protocol events
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IEventService.CreateEventAsync(NatureOS.MINDEX.Models.MycorrhizaeEvent,System.Threading.CancellationToken)">
+            <summary>
+            Store a new event in MINDEX
+            </summary>
+            <param name="mycorrhizaeEvent">The event to store</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>The stored event with assigned ID</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IEventService.GetEventAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Retrieve an event by ID
+            </summary>
+            <param name="eventId">Event ID</param>
+            <param name="sourceDevice">Source device partition key</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>The event if found</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IEventService.QueryEventsAsync(NatureOS.CoreApi.Services.EventQuery,System.Threading.CancellationToken)">
+            <summary>
+            Query events with filtering and pagination
+            </summary>
+            <param name="query">Query parameters</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Paged result of events</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IEventService.GetEventsByDeviceAsync(System.String,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get events by source device
+            </summary>
+            <param name="sourceDevice">Source device ID</param>
+            <param name="limit">Maximum number of events to return</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>List of events from the device</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IEventService.GetEventsByDomainAsync(System.String,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get events by kingdom/domain
+            </summary>
+            <param name="kingdomDomain">Kingdom domain filter</param>
+            <param name="limit">Maximum number of events to return</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>List of events in the domain</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IEventService.GetEventsByTimeRangeAsync(System.DateTime,System.DateTime,System.Int32,System.Threading.CancellationToken)">
+            <summary>
+            Get events within a time range
+            </summary>
+            <param name="startTime">Start time (inclusive)</param>
+            <param name="endTime">End time (inclusive)</param>
+            <param name="limit">Maximum number of events to return</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>List of events in the time range</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IEventService.DeleteEventAsync(System.String,System.String,System.Threading.CancellationToken)">
+            <summary>
+            Delete an event
+            </summary>
+            <param name="eventId">Event ID to delete</param>
+            <param name="sourceDevice">Source device partition key</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>True if deleted successfully</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IEventService.GetEventStatisticsAsync(NatureOS.CoreApi.Services.EventQuery,System.Threading.CancellationToken)">
+            <summary>
+            Get aggregated statistics for events
+            </summary>
+            <param name="query">Query parameters for aggregation</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Event statistics</returns>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.EventQuery">
+            <summary>
+            Query parameters for event searches
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.SourceDevice">
+            <summary>
+            Source device filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.KingdomDomain">
+            <summary>
+            Kingdom domain filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.StartTime">
+            <summary>
+            Start time filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.EndTime">
+            <summary>
+            End time filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.TenantId">
+            <summary>
+            Tenant ID filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.PageSize">
+            <summary>
+            Page size for pagination
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.ContinuationToken">
+            <summary>
+            Continuation token for pagination
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.SortOrder">
+            <summary>
+            Sort order (timestamp_asc, timestamp_desc)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.IncludeDecodedMeaning">
+            <summary>
+            Include decoded meaning in results
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventQuery.IncludeMetadata">
+            <summary>
+            Include metadata in results
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.PagedResult`1">
+            <summary>
+            Paged result container
+            </summary>
+            <typeparam name="T">Type of items in the result</typeparam>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.PagedResult`1.Items">
+            <summary>
+            Items in this page
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.PagedResult`1.TotalCount">
+            <summary>
+            Total count (if available)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.PagedResult`1.ContinuationToken">
+            <summary>
+            Continuation token for next page
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.PagedResult`1.HasMore">
+            <summary>
+            Whether there are more pages
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.EventStatistics">
+            <summary>
+            Event statistics and aggregations
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventStatistics.TotalEvents">
+            <summary>
+            Total event count
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventStatistics.EventsByDomain">
+            <summary>
+            Events by kingdom/domain
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventStatistics.EventsByDevice">
+            <summary>
+            Events by source device
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventStatistics.TimeRange">
+            <summary>
+            Time range of events
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EventStatistics.Quality">
+            <summary>
+            Data quality statistics
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.DateTimeRange">
+            <summary>
+            Date time range
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DateTimeRange.Start">
+            <summary>
+            Start time
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DateTimeRange.End">
+            <summary>
+            End time
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.QualityStatistics">
+            <summary>
+            Data quality statistics
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.QualityStatistics.AverageQualityScore">
+            <summary>
+            Average quality score
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.QualityStatistics.EventsWithDecodedMeaning">
+            <summary>
+            Events with decoded meaning
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.QualityStatistics.EventsWithLocation">
+            <summary>
+            Events with location data
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.QualityStatistics.EventsWithTaxonomy">
+            <summary>
+            Events with taxonomic classification
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.IFungaService">
+            <summary>
+            Service interface for FUNGA (mycology) domain operations
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IFungaService.GetFungaEventsAsync(NatureOS.CoreApi.Services.FungaQuery,System.Threading.CancellationToken)">
+            <summary>
+            Get FUNGA events
+            </summary>
+            <param name="query">Query parameters</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Paged result of FUNGA events</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IFungaService.ClassifySpecimenAsync(System.Object,System.Threading.CancellationToken)">
+            <summary>
+            Classify fungal specimen
+            </summary>
+            <param name="signalVector">Sensor data</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Classification result</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IFungaService.AnalyzeNetworkAsync(System.Double,NatureOS.MINDEX.Models.GeoLocation,System.Threading.CancellationToken)">
+            <summary>
+            Get mycorrhizal network analysis
+            </summary>
+            <param name="locationRadius">Geographic radius in meters</param>
+            <param name="location">Center location</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Network analysis result</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IFungaService.GetSporeDispersalAsync(NatureOS.CoreApi.Services.DateTimeRange,NatureOS.MINDEX.Models.GeoLocation,System.Threading.CancellationToken)">
+            <summary>
+            Get spore dispersal patterns
+            </summary>
+            <param name="timeRange">Time range for analysis</param>
+            <param name="location">Location for analysis</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Dispersal pattern analysis</returns>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.IFungaService.GetDiversityMetricsAsync(NatureOS.CoreApi.Services.FungaQuery,System.Threading.CancellationToken)">
+            <summary>
+            Get fungal diversity metrics
+            </summary>
+            <param name="query">Query parameters</param>
+            <param name="cancellationToken">Cancellation token</param>
+            <returns>Diversity metrics</returns>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.FungaQuery">
+            <summary>
+            FUNGA-specific query parameters
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungaQuery.Phylum">
+            <summary>
+            Fungal phylum filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungaQuery.SubstrateType">
+            <summary>
+            Substrate type filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungaQuery.TemperatureRange">
+            <summary>
+            Temperature range filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungaQuery.HumidityRange">
+            <summary>
+            Humidity range filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungaQuery.pHRange">
+            <summary>
+            pH range filter
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungaQuery.MycorrhizalOnly">
+            <summary>
+            Include only mycorrhizal fungi
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.FungalClassification">
+            <summary>
+            Fungal classification result
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungalClassification.Taxonomy">
+            <summary>
+            Predicted taxonomy
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungalClassification.Confidence">
+            <summary>
+            Classification confidence
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungalClassification.Alternatives">
+            <summary>
+            Alternative classifications
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungalClassification.Features">
+            <summary>
+            Morphological features detected
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.FungalClassification.Ecology">
+            <summary>
+            Ecological indicators
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.AlternativeClassification">
+            <summary>
+            Alternative classification option
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.AlternativeClassification.Taxonomy">
+            <summary>
+            Alternative taxonomy
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.AlternativeClassification.Confidence">
+            <summary>
+            Confidence score
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.MorphologicalFeatures">
+            <summary>
+            Morphological features
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.MorphologicalFeatures.CapDiameter">
+            <summary>
+            Cap diameter (mm)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.MorphologicalFeatures.StemHeight">
+            <summary>
+            Stem height (mm)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.MorphologicalFeatures.SporeSize">
+            <summary>
+            Spore size (micrometers)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.MorphologicalFeatures.Color">
+            <summary>
+            Color description
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.MorphologicalFeatures.Texture">
+            <summary>
+            Texture description
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.EcologicalIndicators">
+            <summary>
+            Ecological indicators
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EcologicalIndicators.MycorrhizalType">
+            <summary>
+            Mycorrhizal type
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EcologicalIndicators.HostSpecies">
+            <summary>
+            Host tree species
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EcologicalIndicators.SoilHealth">
+            <summary>
+            Soil health indicators
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.EcologicalIndicators.EcosystemRole">
+            <summary>
+            Ecosystem role
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.MycorrhizalNetwork">
+            <summary>
+            Mycorrhizal network analysis
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.MycorrhizalNetwork.Nodes">
+            <summary>
+            Network nodes (fungi and plants)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.MycorrhizalNetwork.Edges">
+            <summary>
+            Network connections
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.MycorrhizalNetwork.Metrics">
+            <summary>
+            Network metrics
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.NetworkNode">
+            <summary>
+            Network node
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkNode.Id">
+            <summary>
+            Node ID
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkNode.Type">
+            <summary>
+            Node type (fungi/plant)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkNode.Species">
+            <summary>
+            Species information
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkNode.Location">
+            <summary>
+            Location
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkNode.ConnectionCount">
+            <summary>
+            Connection count
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.NetworkEdge">
+            <summary>
+            Network edge (connection)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkEdge.SourceId">
+            <summary>
+            Source node ID
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkEdge.TargetId">
+            <summary>
+            Target node ID
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkEdge.Strength">
+            <summary>
+            Connection strength
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkEdge.Type">
+            <summary>
+            Connection type
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.NetworkMetrics">
+            <summary>
+            Network metrics
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkMetrics.NodeCount">
+            <summary>
+            Total nodes
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkMetrics.EdgeCount">
+            <summary>
+            Total edges
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkMetrics.Density">
+            <summary>
+            Network density
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.NetworkMetrics.ClusteringCoefficient">
+            <summary>
+            Average clustering coefficient
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.SporeDispersal">
+            <summary>
+            Spore dispersal analysis
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.SporeDispersal.Patterns">
+            <summary>
+            Dispersal patterns
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.SporeDispersal.WindInfluence">
+            <summary>
+            Wind influence analysis
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.SporeDispersal.TemporalPattern">
+            <summary>
+            Temporal patterns
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.DispersalPattern">
+            <summary>
+            Dispersal pattern
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DispersalPattern.Source">
+            <summary>
+            Source location
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DispersalPattern.Targets">
+            <summary>
+            Target locations
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DispersalPattern.Distance">
+            <summary>
+            Dispersal distance (meters)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.DispersalPattern.Concentration">
+            <summary>
+            Spore concentration
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.WindInfluence">
+            <summary>
+            Wind influence on dispersal
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.WindInfluence.Direction">
+            <summary>
+            Wind direction (degrees)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.WindInfluence.Speed">
+            <summary>
+            Wind speed (m/s)
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.WindInfluence.Correlation">
+            <summary>
+            Correlation with dispersal
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.TemporalPattern">
+            <summary>
+            Temporal dispersal pattern
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.TemporalPattern.PeakTimes">
+            <summary>
+            Peak dispersal times
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.TemporalPattern.SeasonalVariations">
+            <summary>
+            Seasonal variations
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.BiodiversityMetrics">
+            <summary>
+            Biodiversity metrics
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.BiodiversityMetrics.SpeciesRichness">
+            <summary>
+            Species richness
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.BiodiversityMetrics.ShannonIndex">
+            <summary>
+            Shannon diversity index
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.BiodiversityMetrics.SimpsonIndex">
+            <summary>
+            Simpson diversity index
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.BiodiversityMetrics.EvennessIndex">
+            <summary>
+            Evenness index
+            </summary>
+        </member>
+        <member name="P:NatureOS.CoreApi.Services.BiodiversityMetrics.RareSpeciesCount">
+            <summary>
+            Rare species count
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.TemperatureRange">
+            <summary>
+            Temperature range
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.HumidityRange">
+            <summary>
+            Humidity range
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.pHRange">
+            <summary>
+            pH range
+            </summary>
+        </member>
+        <member name="T:NatureOS.CoreApi.Services.MycosoftIntegrationService">
+            <summary>
+            Service for integrating NatureOS with all Mycosoft products and services
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.MycosoftIntegrationService.ProcessMushroom1DataAsync(NatureOS.CoreApi.Services.Mushroom1Telemetry,System.Threading.CancellationToken)">
+            <summary>
+            Process Mushroom 1 device telemetry
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.MycosoftIntegrationService.SendToMWaveAsync(NatureOS.MINDEX.Models.MycorrhizaeEvent,System.Threading.CancellationToken)">
+            <summary>
+            Send event to MWave for signal processing
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.MycosoftIntegrationService.SendToAlarmAsync(NatureOS.MINDEX.Models.MycorrhizaeEvent,System.Threading.CancellationToken)">
+            <summary>
+            Send event to ALARM for anomaly detection
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.MycosoftIntegrationService.UpdateMycaAsync(NatureOS.MINDEX.Models.MycorrhizaeEvent,System.Threading.CancellationToken)">
+            <summary>
+            Update MYCA AI Assistant with new data
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.MycosoftIntegrationService.SyncWithWebsiteAsync(NatureOS.CoreApi.Services.WebsiteSyncRequest,System.Threading.CancellationToken)">
+            <summary>
+            Sync data with Mycosoft.com website
+            </summary>
+        </member>
+        <member name="M:NatureOS.CoreApi.Services.MycosoftIntegrationService.ProcessHplSimulationAsync(NatureOS.CoreApi.Services.HplSimulationRequest,System.Threading.CancellationToken)">
+            <summary>
+            Process HPL (Hypha Programming Language) simulation request
+            </summary>
+        </member>
+    </members>
+</doc>
