@@ -17,7 +17,10 @@ param(
     [switch]$SkipTests = $false,
     
     [Parameter(Mandatory=$false)]
-    [switch]$DeployOnly = $false
+    [switch]$DeployOnly = $false,
+    
+    [Parameter(Mandatory=$false)]
+    [switch]$TestOnly = $false
 )
 
 # Configuration
@@ -366,7 +369,7 @@ function Main {
     
     # Initialize results
     $allTestResults = @{}
-    $deploymentSuccess = $false
+    [bool]$deploymentSuccess = $false
     
     # Prerequisites
     if (-not (Test-Prerequisites)) {
@@ -380,16 +383,17 @@ function Main {
         exit 1
     }
     
-    # Run tests unless skipped
+    # Run tests unless skipped or deploy-only
     if (-not $SkipTests -and -not $DeployOnly) {
-        $allTestResults["CoreComponents"] = Test-CoreComponents
+        $coreComponentsResult = Test-CoreComponents
+        $allTestResults["CoreComponents"] = ($coreComponentsResult.Values -notcontains $false)
         $allTestResults["WebsiteIntegration"] = Test-WebsiteIntegration
         $allTestResults["DeviceIntegration"] = Test-DeviceIntegration
         $allTestResults["Infrastructure"] = Test-Infrastructure
     }
     
-    # Deploy to Azure unless test-only
-    if (-not $SkipTests -or $DeployOnly) {
+    # Deploy to Azure unless test-only mode
+    if (-not $TestOnly) {
         $deploymentSuccess = Deploy-To-Azure
     }
     

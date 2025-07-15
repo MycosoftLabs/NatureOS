@@ -510,7 +510,7 @@ resource coreApiWebApp 'Microsoft.Web/sites@2023-01-01' = {
         }
         {
           name: 'AzureAd__Authority'
-          value: 'https://login.microsoftonline.com/${subscription().tenantId}'
+          value: '${az.environment().authentication.loginEndpoint}${subscription().tenantId}'
         }
         {
           name: 'AzureAd__Audience'
@@ -526,14 +526,13 @@ resource coreApiWebApp 'Microsoft.Web/sites@2023-01-01' = {
     hostNamesDisabled: false
     containerSize: 0
     dailyMemoryTimeQuota: 0
-    httpsOnly: true
     redundancyMode: 'None'
     storageAccountRequired: false
     keyVaultReferenceIdentity: 'SystemAssigned'
   }
 }
 
-// Assign Key Vault access to Web App
+// Assign Key Vault access to Web App and Function App
 resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-01' = {
   parent: keyVault
   name: 'add'
@@ -542,6 +541,14 @@ resource keyVaultAccessPolicy 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-
       {
         tenantId: subscription().tenantId
         objectId: coreApiWebApp.identity.principalId
+        permissions: {
+          secrets: ['Get']
+          certificates: ['Get']
+        }
+      }
+      {
+        tenantId: subscription().tenantId
+        objectId: functionApp.identity.principalId
         permissions: {
           secrets: ['Get']
           certificates: ['Get']
@@ -661,27 +668,6 @@ resource functionApp 'Microsoft.Web/sites@2023-01-01' = {
   }
 }
 
-// Assign Key Vault access to Function App
-resource functionAppKeyVaultAccess 'Microsoft.KeyVault/vaults/accessPolicies@2023-07-01' = {
-  parent: keyVault
-  name: 'add'
-  properties: {
-    accessPolicies: [
-      {
-        tenantId: subscription().tenantId
-        objectId: functionApp.identity.principalId
-        permissions: {
-          secrets: ['Get']
-          certificates: ['Get']
-        }
-      }
-    ]
-  }
-  dependsOn: [
-    keyVaultAccessPolicy
-  ]
-}
-
 // Metric Alerts for monitoring
 resource cosmosDbRuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
   name: '${namePrefix}-cosmosdb-ru-alert'
@@ -705,6 +691,7 @@ resource cosmosDbRuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
           operator: 'GreaterThan'
           threshold: 1000
           timeAggregation: 'Average'
+          criterionType: 'StaticThresholdCriterion'
         }
       ]
     }
@@ -733,6 +720,7 @@ resource webAppCpuAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
           operator: 'GreaterThan'
           threshold: 80
           timeAggregation: 'Average'
+          criterionType: 'StaticThresholdCriterion'
         }
       ]
     }
@@ -761,32 +749,29 @@ resource webAppErrorAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
           operator: 'GreaterThan'
           threshold: 5
           timeAggregation: 'Total'
+          criterionType: 'StaticThresholdCriterion'
         }
       ]
     }
   }
 }
 
-// Outputs
+// Outputs (non-sensitive only)
 output cosmosDbAccountName string = cosmosDbAccount.name
 output cosmosDbEndpoint string = cosmosDbAccount.properties.documentEndpoint
-output cosmosDbConnectionString string = cosmosDbAccount.listConnectionStrings().connectionStrings[0].connectionString
 output iotHubName string = iotHub.name
-output iotHubConnectionString string = iotHub.listKeys().value[0].connectionString
 output eventGridTopicEndpoint string = eventGridTopic.properties.endpoint
-output serviceBusConnectionString string = serviceBusNamespace.listKeys().value[0].connectionString
 output storageAccountName string = storageAccount.name
-output storageConnectionString string = 'DefaultEndpointsProtocol=https;AccountName=${storageAccount.name};AccountKey=${storageAccount.listKeys().keys[0].value};EndpointSuffix=${az.environment().suffixes.storage}'
 output applicationInsightsInstrumentationKey string = applicationInsights.properties.InstrumentationKey
 output applicationInsightsConnectionString string = applicationInsights.properties.ConnectionString
-output containerAppsEnvironmentId string = containerAppsEnvironment.id
-output apiManagementGatewayUrl string = 'https://${apiManagement.properties.gatewayUrl}'
-output keyVaultName string = keyVault.name
-output keyVaultUri string = keyVault.properties.vaultUri
 output coreApiWebAppName string = coreApiWebApp.name
 output coreApiWebAppUrl string = 'https://${coreApiWebApp.properties.defaultHostName}'
 output functionAppName string = functionApp.name
 output functionAppUrl string = 'https://${functionApp.properties.defaultHostName}'
+output keyVaultName string = keyVault.name
+output keyVaultUri string = keyVault.properties.vaultUri
+output containerAppsEnvironmentId string = containerAppsEnvironment.id
+output apiManagementGatewayUrl string = 'https://${apiManagement.properties.gatewayUrl}'
 output logAnalyticsWorkspaceName string = logAnalyticsWorkspace.name
 output logAnalyticsWorkspaceId string = logAnalyticsWorkspace.id
 output resourceGroupName string = resourceGroup().name 
