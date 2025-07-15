@@ -1,0 +1,354 @@
+# Mycosoft Ecosystem Integration Deployment Configuration
+# This file defines the complete integration between NatureOS and all Mycosoft products
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mycosoft-integration-config
+  namespace: natureos
+data:
+  # NatureOS Core Configuration
+  natureos-config.json: |
+    {
+      "services": {
+        "core-api": {
+          "endpoint": "https://natureos-api.mycosoft.com",
+          "version": "2.0.0",
+          "features": ["events", "devices", "funga", "integration"]
+        },
+        "mindex": {
+          "endpoint": "https://natureos-cosmos.documents.azure.com:443/",
+          "database": "mindex",
+          "containers": ["events", "funga", "devices", "sim_runs", "compounds"]
+        },
+        "ingestion": {
+          "endpoint": "https://natureos-ingestion.azurewebsites.net",
+          "functions": ["ProcessIoTMessage", "IngestEvent", "ProcessEnrichmentMessage"]
+        }
+      },
+      "integrations": {
+        "website": {
+          "enabled": true,
+          "endpoint": "https://mycosoft.vercel.app",
+          "sync_interval": 30,
+          "data_types": ["dashboard", "live-data", "myca"]
+        },
+        "mushroom1": {
+          "enabled": true,
+          "device_type": "bioelectric-sensor",
+          "protocol": "mqtt-iot-hub",
+          "data_format": "mycorrhizae-protocol"
+        },
+        "mwave": {
+          "enabled": true,
+          "endpoint": "https://mwave-processor.mycosoft.com",
+          "processing_queue": "mwave-processing"
+        },
+        "alarm": {
+          "enabled": true,
+          "endpoint": "https://alarm-monitor.mycosoft.com",
+          "alert_queue": "alarm-analysis"
+        },
+        "myca": {
+          "enabled": true,
+          "endpoint": "https://myca-api.mycosoft.com",
+          "knowledge_base": "fungi-llm",
+          "vector_store": "azure-ai-search"
+        },
+        "simulators": {
+          "mycelium_sim": {
+            "enabled": true,
+            "endpoint": "https://mycelium-sim.mycosoft.com",
+            "wasm_runtime": "wasmtime"
+          },
+          "mushroom_sim": {
+            "enabled": true,
+            "endpoint": "https://mushroom-sim.mycosoft.com",
+            "renderer": "three-js"
+          },
+          "compound_sim": {
+            "enabled": true,
+            "endpoint": "https://compound-sim.mycosoft.com",
+            "ml_pipeline": "azure-ml"
+          }
+        }
+      }
+    }
+
+  # Website Integration Settings
+  website-integration.json: |
+    {
+      "api_endpoints": {
+        "dashboard": "/api/dashboard",
+        "myca": "/api/myca",
+        "live_data": "/api/live-data",
+        "devices": "/api/devices",
+        "events": "/api/events"
+      },
+      "real_time": {
+        "websocket_url": "wss://natureos-api.mycosoft.com/ws",
+        "update_interval": 5000,
+        "reconnect_attempts": 5
+      },
+      "components": {
+        "live_data_widget": {
+          "refresh_rate": 5000,
+          "max_readings": 10,
+          "charts_enabled": true
+        },
+        "myca_chat": {
+          "max_messages": 50,
+          "context_window": 10,
+          "suggestions_count": 6
+        },
+        "device_map": {
+          "map_provider": "mapbox",
+          "cluster_threshold": 10,
+          "update_interval": 30000
+        }
+      }
+    }
+
+  # Device Integration Configuration
+  device-config.json: |
+    {
+      "mushroom1": {
+        "device_class": "bioelectric_sensor",
+        "firmware_version": "2.1.0",
+        "communication": {
+          "protocol": "mqtt",
+          "iot_hub": "natureos-iothub.azure-devices.net",
+          "port": 8883,
+          "security": "sas_token"
+        },
+        "sensors": {
+          "ads1299": {
+            "channels": 8,
+            "sample_rate": 250,
+            "gain": 24,
+            "data_format": "int32"
+          },
+          "bme688": {
+            "temperature": true,
+            "humidity": true,
+            "pressure": true,
+            "gas_resistance": true,
+            "voc_index": true
+          }
+        },
+        "telemetry": {
+          "interval": 30000,
+          "buffer_size": 250,
+          "compression": false,
+          "format": "mycorrhizae_protocol"
+        }
+      },
+      "spore_detector": {
+        "device_class": "particle_counter",
+        "communication": {
+          "protocol": "lorawan",
+          "network": "helium",
+          "frequency": "868MHz"
+        }
+      }
+    }
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: natureos-integration-service
+  namespace: natureos
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: natureos-integration
+  template:
+    metadata:
+      labels:
+        app: natureos-integration
+    spec:
+      containers:
+      - name: integration-api
+        image: natureos/integration-service:latest
+        ports:
+        - containerPort: 8080
+        env:
+        - name: COSMOS_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: natureos-secrets
+              key: cosmos-connection-string
+        - name: IOT_HUB_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: natureos-secrets
+              key: iothub-connection-string
+        - name: SERVICE_BUS_CONNECTION_STRING
+          valueFrom:
+            secretKeyRef:
+              name: natureos-secrets
+              key: servicebus-connection-string
+        - name: MYCOSOFT_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: natureos-secrets
+              key: mycosoft-api-key
+        volumeMounts:
+        - name: config-volume
+          mountPath: /app/config
+          readOnly: true
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 8080
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: config-volume
+        configMap:
+          name: mycosoft-integration-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: natureos-integration-service
+  namespace: natureos
+spec:
+  selector:
+    app: natureos-integration
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 8080
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: natureos-integration-ingress
+  namespace: natureos
+  annotations:
+    kubernetes.io/ingress.class: "nginx"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/cors-allow-origin: "https://mycosoft.vercel.app"
+    nginx.ingress.kubernetes.io/cors-allow-methods: "GET, POST, PUT, DELETE, OPTIONS"
+    nginx.ingress.kubernetes.io/cors-allow-headers: "DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Authorization"
+spec:
+  tls:
+  - hosts:
+    - natureos-api.mycosoft.com
+    secretName: natureos-api-tls
+  rules:
+  - host: natureos-api.mycosoft.com
+    http:
+      paths:
+      - path: /api/mycosoft
+        pathType: Prefix
+        backend:
+          service:
+            name: natureos-integration-service
+            port:
+              number: 80
+
+---
+# HPA for auto-scaling based on load
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: natureos-integration-hpa
+  namespace: natureos
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: natureos-integration-service
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+
+---
+# Event processing jobs
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: sync-website-data
+  namespace: natureos
+spec:
+  schedule: "*/5 * * * *" # Every 5 minutes
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: sync-job
+            image: natureos/sync-worker:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              curl -X POST \
+                -H "Authorization: Bearer $MYCOSOFT_API_KEY" \
+                -H "Content-Type: application/json" \
+                -d '{"syncTargets":["website"],"dataTypes":["events","devices","species"]}' \
+                https://natureos-api.mycosoft.com/api/mycosoft/sync
+            env:
+            - name: MYCOSOFT_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: natureos-secrets
+                  key: mycosoft-api-key
+          restartPolicy: OnFailure
+
+---
+# MYCA knowledge update job
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: update-myca-knowledge
+  namespace: natureos
+spec:
+  schedule: "0 */6 * * *" # Every 6 hours
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: myca-update
+            image: natureos/myca-updater:latest
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Update MYCA with latest discoveries
+              kubectl exec deployment/natureos-integration-service -- \
+                curl -X POST http://localhost:8080/api/mycosoft/myca/bulk-update
+          restartPolicy: OnFailure 
