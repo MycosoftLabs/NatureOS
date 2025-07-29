@@ -286,6 +286,10 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
 
             simResponse.EnsureSuccessStatusCode();
             var simResult = await simResponse.Content.ReadFromJsonAsync<MyceliumSimResult>(cancellationToken);
+            if (simResult == null)
+            {
+                throw new InvalidOperationException("Simulation service returned no result");
+            }
 
             // Store results in MINDEX
             await StoreSimulationResultAsync(simResult);

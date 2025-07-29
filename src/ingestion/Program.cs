@@ -31,9 +31,14 @@ var host = new HostBuilder()
 
         services.AddSingleton(provider =>
         {
-            var endpoint = configuration.GetConnectionString("EventGridConnectionString") ?? 
+            var endpoint = configuration.GetConnectionString("EventGridConnectionString") ??
                            configuration["EventGridConnectionString"];
-            var key = configuration["EventGridKey"] ?? "";
+            if (string.IsNullOrWhiteSpace(endpoint))
+            {
+                throw new InvalidOperationException("EventGrid connection string is not configured");
+            }
+
+            var key = configuration["EventGridKey"] ?? string.Empty;
             return new EventGridPublisherClient(new Uri(endpoint), new AzureKeyCredential(key));
         });
 
