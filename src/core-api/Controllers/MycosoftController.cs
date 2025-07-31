@@ -42,10 +42,10 @@ public class MycosoftController : ControllerBase
     [HttpGet("events/stream")]
     public async Task StreamEvents()
     {
-        Response.Headers.Add("Content-Type", "text/event-stream");
-        Response.Headers.Add("Cache-Control", "no-cache");
-        Response.Headers.Add("Connection", "keep-alive");
-        Response.Headers.Add("Access-Control-Allow-Origin", "*");
+        Response.Headers["Content-Type"] = "text/event-stream";
+        Response.Headers["Cache-Control"] = "no-cache";
+        Response.Headers["Connection"] = "keep-alive";
+        Response.Headers["Access-Control-Allow-Origin"] = "*";
 
         _logger.LogInformation("Started event stream for client");
 
@@ -86,10 +86,10 @@ public class MycosoftController : ControllerBase
     [HttpGet("dashboard/stream")]
     public async Task StreamDashboardData()
     {
-        Response.Headers.Add("Content-Type", "text/event-stream");
-        Response.Headers.Add("Cache-Control", "no-cache");
-        Response.Headers.Add("Connection", "keep-alive");
-        Response.Headers.Add("Access-Control-Allow-Origin", "*");
+        Response.Headers["Content-Type"] = "text/event-stream";
+        Response.Headers["Cache-Control"] = "no-cache";
+        Response.Headers["Connection"] = "keep-alive";
+        Response.Headers["Access-Control-Allow-Origin"] = "*";
 
         _logger.LogInformation("Started dashboard stream for client");
 
@@ -274,7 +274,7 @@ Please provide a helpful response that considers the current system state and da
         {
             var systemContext = await GetSystemContext();
             var deviceStats = await _deviceService.GetDeviceStatisticsAsync();
-            var eventStats = await _eventService.GetEventStatisticsAsync();
+            var eventStats = await _eventService.GetEventStatisticsAsync(new Services.EventQuery());
             
             var status = new
             {
@@ -304,7 +304,7 @@ Please provide a helpful response that considers the current system state and da
     private async Task<object> GetLiveDataForWebsite()
     {
         var deviceStats = await _deviceService.GetDeviceStatisticsAsync();
-        var eventStats = await _eventService.GetEventStatisticsAsync();
+        var eventStats = await _eventService.GetEventStatisticsAsync(new Services.EventQuery());
         var recentEvents = await _eventService.GetEventsAsync(new Services.EventQuery { Limit = 10 });
         
         return new
@@ -332,7 +332,7 @@ Please provide a helpful response that considers the current system state and da
     private async Task<object> GetSystemContext()
     {
         var deviceStats = await _deviceService.GetDeviceStatisticsAsync();
-        var eventStats = await _eventService.GetEventStatisticsAsync();
+        var eventStats = await _eventService.GetEventStatisticsAsync(new Services.EventQuery());
         
         return new
         {

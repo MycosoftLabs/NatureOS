@@ -121,6 +121,12 @@ public class EventService : IEventService
         }
     }
 
+    public async Task<PagedResult<MycorrhizaeEvent>> GetEventsAsync(EventQuery query, CancellationToken cancellationToken = default)
+    {
+        // Alias for QueryEventsAsync to maintain compatibility
+        return await QueryEventsAsync(query, cancellationToken);
+    }
+
     public async Task<IEnumerable<MycorrhizaeEvent>> GetEventsByDeviceAsync(string sourceDevice, int limit = 100, CancellationToken cancellationToken = default)
     {
         try

@@ -157,8 +157,8 @@ public class ProactiveMonitoringService : BackgroundService
             var deviceService = scope.ServiceProvider.GetRequiredService<IDeviceService>();
             
             var devices = await deviceService.GetDevicesAsync();
-            var offlineDevices = devices.Where(d => d.Status == "Offline" || 
-                (DateTime.UtcNow - d.LastSeen).TotalMinutes > 30);
+            var offlineDevices = devices.Where(d => d.Status == DeviceStatus.Offline || 
+                (d.LastSeen.HasValue && (DateTime.UtcNow - d.LastSeen.Value).TotalMinutes > 30));
             
             foreach (var device in offlineDevices)
             {

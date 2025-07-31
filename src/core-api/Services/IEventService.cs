@@ -33,6 +33,14 @@ public interface IEventService
     Task<PagedResult<MycorrhizaeEvent>> QueryEventsAsync(EventQuery query, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Get events with filtering and pagination (alias for QueryEventsAsync)
+    /// </summary>
+    /// <param name="query">Query parameters</param>
+    /// <param name="cancellationToken">Cancellation token</param>
+    /// <returns>Paged result of events</returns>
+    Task<PagedResult<MycorrhizaeEvent>> GetEventsAsync(EventQuery query, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Get events by source device
     /// </summary>
     /// <param name="sourceDevice">Source device ID</param>
@@ -99,6 +107,15 @@ public class EventQuery
     public DateTime? StartTime { get; set; }
 
     /// <summary>
+    /// Start date filter (alias for StartTime)
+    /// </summary>
+    public DateTime? StartDate
+    {
+        get => StartTime;
+        set => StartTime = value;
+    }
+
+    /// <summary>
     /// End time filter
     /// </summary>
     public DateTime? EndTime { get; set; }
@@ -114,12 +131,21 @@ public class EventQuery
     public int PageSize { get; set; } = 50;
 
     /// <summary>
+    /// Maximum number of events to return (alias for PageSize)
+    /// </summary>
+    public int Limit
+    {
+        get => PageSize;
+        set => PageSize = value;
+    }
+
+    /// <summary>
     /// Continuation token for pagination
     /// </summary>
     public string? ContinuationToken { get; set; }
 
     /// <summary>
-    /// Sort order (timestamp_asc, timestamp_desc)
+    /// Sort order (timestamp_asc, timestamp_desc, asc, desc)
     /// </summary>
     public string SortOrder { get; set; } = "timestamp_desc";
 
@@ -170,6 +196,31 @@ public class EventStatistics
     /// Total event count
     /// </summary>
     public long TotalEvents { get; set; }
+
+    /// <summary>
+    /// Total count (alias for TotalEvents)
+    /// </summary>
+    public long TotalCount => TotalEvents;
+
+    /// <summary>
+    /// Events today
+    /// </summary>
+    public long TodayCount { get; set; }
+
+    /// <summary>
+    /// Average events per hour
+    /// </summary>
+    public double AveragePerHour { get; set; }
+
+    /// <summary>
+    /// Average events per day
+    /// </summary>
+    public double AveragePerDay { get; set; }
+
+    /// <summary>
+    /// Unique species count
+    /// </summary>
+    public long UniqueSpeciesCount { get; set; }
 
     /// <summary>
     /// Events by kingdom/domain

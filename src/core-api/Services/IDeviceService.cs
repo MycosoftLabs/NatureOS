@@ -90,6 +90,11 @@ public class Device
     public DateTime? LastSeen { get; set; }
 
     /// <summary>
+    /// Battery level percentage (0-100)
+    /// </summary>
+    public int? BatteryLevel { get; set; }
+
+    /// <summary>
     /// Tenant ID
     /// </summary>
     public string? TenantId { get; set; }
@@ -131,6 +136,16 @@ public class DeviceStatistics
     /// Total device count
     /// </summary>
     public long TotalDevices { get; set; }
+
+    /// <summary>
+    /// Total count (alias for TotalDevices)
+    /// </summary>
+    public long TotalCount => TotalDevices;
+
+    /// <summary>
+    /// Online device count
+    /// </summary>
+    public long OnlineCount { get; set; }
 
     /// <summary>
     /// Devices by status

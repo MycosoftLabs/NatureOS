@@ -275,9 +275,13 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
             SignalVector = telemetryData,
             DecodedMeaning = new DecodedMeaning
             {
-                EventType = "bioelectric_reading",
+                Type = "bioelectric_reading",
                 Confidence = 0.95,
-                Metadata = new { ProcessedBy = "NatureOS-MycosoftIntegration", Version = "2.0" }
+                Ontology = new Dictionary<string, object> 
+                { 
+                    ["ProcessedBy"] = "NatureOS-MycosoftIntegration", 
+                    ["Version"] = "2.0" 
+                }
             },
             References = new EventReferences
             {
@@ -291,8 +295,8 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
             Metadata = new EventMetadata
             {
                 QualityScore = 0.95,
-                ProcessingPipeline = "real-time",
-                Tags = new[] { "mushroom1", "bioelectric", "real-time" }
+                PipelineVersion = "real-time",
+                Flags = new List<string> { "mushroom1", "bioelectric", "real-time" }
             },
             TTL = 86400 // 24 hours
         };
@@ -302,14 +306,14 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
     {
         try
         {
-            var eventGridEvent = new EventGridEvent
+            var eventGridEvent = new EventGridEvent(
+                subject: $"natureos/events/{eventData.SourceDevice}",
+                eventType: "NatureOS.Event.Created",
+                dataVersion: "1.0",
+                data: BinaryData.FromObjectAsJson(eventData))
             {
                 Id = eventData.EventId,
-                Subject = $"natureos/events/{eventData.SourceDevice}",
-                EventType = "NatureOS.Event.Created",
-                DataVersion = "1.0",
-                EventTime = eventData.Timestamp,
-                Data = eventData
+                EventTime = eventData.Timestamp
             };
 
             await _eventGridClient.SendEventAsync(eventGridEvent);
