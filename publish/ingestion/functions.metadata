@@ -1,0 +1,71 @@
+[
+  {
+    "name": "ProcessIoTMessage",
+    "scriptFile": "NatureOS.Ingestion.dll",
+    "entryPoint": "NatureOS.Ingestion.IngestionFunction.ProcessIoTMessage",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "messages",
+        "direction": "In",
+        "type": "eventHubTrigger",
+        "eventHubName": "messages/events",
+        "connection": "IoTHubConnectionString",
+        "cardinality": "Many",
+        "dataType": "String",
+        "properties": {}
+      }
+    ]
+  },
+  {
+    "name": "IngestEvent",
+    "scriptFile": "NatureOS.Ingestion.dll",
+    "entryPoint": "NatureOS.Ingestion.IngestionFunction.IngestEvent",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "req",
+        "direction": "In",
+        "type": "httpTrigger",
+        "authLevel": "Function",
+        "methods": [
+          "post"
+        ],
+        "properties": {}
+      },
+      {
+        "name": "$return",
+        "type": "http",
+        "direction": "Out"
+      }
+    ]
+  },
+  {
+    "name": "ProcessEnrichmentMessage",
+    "scriptFile": "NatureOS.Ingestion.dll",
+    "entryPoint": "NatureOS.Ingestion.IngestionFunction.ProcessEnrichmentMessage",
+    "language": "dotnet-isolated",
+    "properties": {
+      "IsCodeless": false
+    },
+    "bindings": [
+      {
+        "name": "message",
+        "direction": "In",
+        "type": "serviceBusTrigger",
+        "queueName": "mycorrhizae-events",
+        "connection": "ServiceBusConnectionString",
+        "cardinality": "One",
+        "properties": {
+          "supportsDeferredBinding": "True"
+        }
+      }
+    ]
+  }
+]

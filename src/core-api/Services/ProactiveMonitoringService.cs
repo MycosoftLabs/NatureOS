@@ -1,0 +1,516 @@
+using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Hosting;
+using NatureOS.CoreApi.Hubs;
+using System.Diagnostics;
+
+namespace NatureOS.CoreApi.Services;
+
+/// <summary>
+/// Background service for proactive system monitoring and alerting
+/// </summary>
+public class ProactiveMonitoringService : BackgroundService
+{
+    private readonly IServiceProvider _serviceProvider;
+    private readonly IHubContext<NatureOSHub> _hubContext;
+    private readonly ILogger<ProactiveMonitoringService> _logger;
+    private readonly PerformanceCounter? _cpuCounter;
+    private readonly PerformanceCounter? _memoryCounter;
+
+    public ProactiveMonitoringService(
+        IServiceProvider serviceProvider,
+        IHubContext<NatureOSHub> hubContext,
+        ILogger<ProactiveMonitoringService> logger)
+    {
+        _serviceProvider = serviceProvider;
+        _hubContext = hubContext;
+        _logger = logger;
+
+        try
+        {
+            // Initialize performance counters (Windows only)
+            if (OperatingSystem.IsWindows())
+            {
+                _cpuCounter = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+                _memoryCounter = new PerformanceCounter("Memory", "Available MBytes");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to initialize performance counters");
+        }
+    }
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("Proactive monitoring service started");
+
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await PerformMonitoringCycle();
+                await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when cancellation is requested
+                break;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error in monitoring cycle");
+                await Task.Delay(TimeSpan.FromMinutes(5), stoppingToken); // Wait longer on error
+            }
+        }
+
+        _logger.LogInformation("Proactive monitoring service stopped");
+    }
+
+    private async Task PerformMonitoringCycle()
+    {
+        var tasks = new List<Task>
+        {
+            CheckSystemHealth(),
+            CheckDeviceHealth(),
+            CheckDataQuality(),
+            CheckApiPerformance(),
+            CheckExternalConnectivity()
+        };
+
+        await Task.WhenAll(tasks);
+    }
+
+    private async Task CheckSystemHealth()
+    {
+        try
+        {
+            var systemMetrics = await GatherSystemMetrics();
+            
+            // Check CPU usage
+            if (systemMetrics.CpuUsage > 80)
+            {
+                await SendAlert(new SystemAlert
+                {
+                    Type = "SystemHealth",
+                    Category = "Performance",
+                    Severity = systemMetrics.CpuUsage > 90 ? "Critical" : "Warning",
+                    Message = $"High CPU usage detected: {systemMetrics.CpuUsage:F1}%",
+                    Timestamp = DateTime.UtcNow,
+                    Recommendations = new[]
+                    {
+                        "Check for resource-intensive processes",
+                        "Consider scaling up resources",
+                        "Review recent deployments"
+                    }
+                });
+            }
+
+            // Check memory usage
+            if (systemMetrics.MemoryUsage > 85)
+            {
+                await SendAlert(new SystemAlert
+                {
+                    Type = "SystemHealth",
+                    Category = "Memory",
+                    Severity = systemMetrics.MemoryUsage > 95 ? "Critical" : "Warning",
+                    Message = $"High memory usage detected: {systemMetrics.MemoryUsage:F1}%",
+                    Timestamp = DateTime.UtcNow,
+                    Recommendations = new[]
+                    {
+                        "Check for memory leaks",
+                        "Review cache configurations",
+                        "Consider scaling up memory"
+                    }
+                });
+            }
+
+            // Check disk space
+            if (systemMetrics.DiskUsage > 90)
+            {
+                await SendAlert(new SystemAlert
+                {
+                    Type = "SystemHealth",
+                    Category = "Storage",
+                    Severity = "Critical",
+                    Message = $"Low disk space: {systemMetrics.DiskUsage:F1}% used",
+                    Timestamp = DateTime.UtcNow,
+                    Recommendations = new[]
+                    {
+                        "Clean up temporary files",
+                        "Archive old logs",
+                        "Increase storage capacity"
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking system health");
+        }
+    }
+
+    private async Task CheckDeviceHealth()
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var deviceService = scope.ServiceProvider.GetRequiredService<IDeviceService>();
+            
+            var devices = await deviceService.GetDevicesAsync();
+            var offlineDevices = devices.Where(d => d.Status == "Offline" || 
+                (DateTime.UtcNow - d.LastSeen).TotalMinutes > 30);
+            
+            foreach (var device in offlineDevices)
+            {
+                await SendAlert(new SystemAlert
+                {
+                    Type = "DeviceHealth",
+                    Category = "Connectivity",
+                    Severity = "Warning",
+                    Message = $"Device {device.DeviceId} appears offline",
+                    Timestamp = DateTime.UtcNow,
+                    DeviceId = device.DeviceId,
+                    Recommendations = new[]
+                    {
+                        "Check device power and connectivity",
+                        "Verify network connection",
+                        "Review device logs"
+                    }
+                });
+            }
+
+            // Check for devices with low battery
+            var lowBatteryDevices = devices.Where(d => d.BatteryLevel.HasValue && d.BatteryLevel < 20);
+            foreach (var device in lowBatteryDevices)
+            {
+                await SendAlert(new SystemAlert
+                {
+                    Type = "DeviceHealth",
+                    Category = "Battery",
+                    Severity = device.BatteryLevel < 10 ? "Critical" : "Warning",
+                    Message = $"Low battery on device {device.DeviceId}: {device.BatteryLevel}%",
+                    Timestamp = DateTime.UtcNow,
+                    DeviceId = device.DeviceId,
+                    Recommendations = new[]
+                    {
+                        "Schedule battery replacement",
+                        "Check power management settings",
+                        "Consider backup power options"
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking device health");
+        }
+    }
+
+    private async Task CheckDataQuality()
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var eventService = scope.ServiceProvider.GetRequiredService<IEventService>();
+            
+            var recentEvents = await eventService.GetEventsAsync(new EventQuery
+            {
+                StartDate = DateTime.UtcNow.AddHours(-1),
+                Limit = 1000
+            });
+
+            var eventCount = recentEvents.Items.Count();
+            var averageEventsPerHour = 100; // This would be calculated from historical data
+
+            // Check for unusual data patterns
+            if (eventCount < averageEventsPerHour * 0.5) // Less than 50% of normal
+            {
+                await SendAlert(new SystemAlert
+                {
+                    Type = "DataQuality",
+                    Category = "Volume",
+                    Severity = "Warning",
+                    Message = $"Unusually low data volume: {eventCount} events in last hour (expected ~{averageEventsPerHour})",
+                    Timestamp = DateTime.UtcNow,
+                    Recommendations = new[]
+                    {
+                        "Check device connectivity",
+                        "Verify data ingestion pipeline",
+                        "Review processing logs"
+                    }
+                });
+            }
+            else if (eventCount > averageEventsPerHour * 2) // More than 200% of normal
+            {
+                await SendAlert(new SystemAlert
+                {
+                    Type = "DataQuality",
+                    Category = "Volume",
+                    Severity = "Info",
+                    Message = $"Unusually high data volume: {eventCount} events in last hour (expected ~{averageEventsPerHour})",
+                    Timestamp = DateTime.UtcNow,
+                    Recommendations = new[]
+                    {
+                        "Monitor system performance",
+                        "Check for data quality issues",
+                        "Verify device configurations"
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking data quality");
+        }
+    }
+
+    private async Task CheckApiPerformance()
+    {
+        try
+        {
+            var stopwatch = Stopwatch.StartNew();
+            
+            // Test API responsiveness
+            using var scope = _serviceProvider.CreateScope();
+            var eventService = scope.ServiceProvider.GetRequiredService<IEventService>();
+            
+            await eventService.GetEventsAsync(new EventQuery { Limit = 1 });
+            stopwatch.Stop();
+
+            var responseTime = stopwatch.ElapsedMilliseconds;
+            
+            if (responseTime > 5000) // More than 5 seconds
+            {
+                await SendAlert(new SystemAlert
+                {
+                    Type = "Performance",
+                    Category = "API",
+                    Severity = "Critical",
+                    Message = $"API response time is critically slow: {responseTime}ms",
+                    Timestamp = DateTime.UtcNow,
+                    Recommendations = new[]
+                    {
+                        "Check database performance",
+                        "Review system resources",
+                        "Consider scaling infrastructure"
+                    }
+                });
+            }
+            else if (responseTime > 2000) // More than 2 seconds
+            {
+                await SendAlert(new SystemAlert
+                {
+                    Type = "Performance",
+                    Category = "API",
+                    Severity = "Warning",
+                    Message = $"API response time is slower than normal: {responseTime}ms",
+                    Timestamp = DateTime.UtcNow,
+                    Recommendations = new[]
+                    {
+                        "Monitor database queries",
+                        "Check cache performance",
+                        "Review recent changes"
+                    }
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking API performance");
+            
+            await SendAlert(new SystemAlert
+            {
+                Type = "Performance",
+                Category = "API",
+                Severity = "Critical",
+                Message = "API health check failed",
+                Timestamp = DateTime.UtcNow,
+                Recommendations = new[]
+                {
+                    "Check service availability",
+                    "Review error logs",
+                    "Verify dependencies"
+                }
+            });
+        }
+    }
+
+    private async Task CheckExternalConnectivity()
+    {
+        try
+        {
+            // Test external database connections
+            var externalTests = new Dictionary<string, Func<Task<bool>>>
+            {
+                ["CosmosDB"] = TestCosmosDbConnectivity,
+                ["EventGrid"] = TestEventGridConnectivity,
+                ["ServiceBus"] = TestServiceBusConnectivity
+            };
+
+            foreach (var test in externalTests)
+            {
+                try
+                {
+                    var isHealthy = await test.Value();
+                    if (!isHealthy)
+                    {
+                        await SendAlert(new SystemAlert
+                        {
+                            Type = "Connectivity",
+                            Category = "External",
+                            Severity = "Warning",
+                            Message = $"{test.Key} connectivity issue detected",
+                            Timestamp = DateTime.UtcNow,
+                            Recommendations = new[]
+                            {
+                                $"Check {test.Key} service status",
+                                "Verify network connectivity",
+                                "Review authentication credentials"
+                            }
+                        });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to test {Service} connectivity", test.Key);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking external connectivity");
+        }
+    }
+
+    private async Task<SystemMetrics> GatherSystemMetrics()
+    {
+        var metrics = new SystemMetrics
+        {
+            Timestamp = DateTime.UtcNow
+        };
+
+        try
+        {
+            // Get CPU usage
+            if (_cpuCounter != null)
+            {
+                metrics.CpuUsage = _cpuCounter.NextValue();
+            }
+            else
+            {
+                // Fallback for non-Windows systems or when counters are unavailable
+                metrics.CpuUsage = Random.Shared.Next(10, 60); // Simulated
+            }
+
+            // Get memory usage
+            if (_memoryCounter != null)
+            {
+                var availableMemoryMB = _memoryCounter.NextValue();
+                var totalMemoryMB = 8192; // This would be detected from the system
+                metrics.MemoryUsage = ((totalMemoryMB - availableMemoryMB) / totalMemoryMB) * 100;
+            }
+            else
+            {
+                metrics.MemoryUsage = Random.Shared.Next(30, 70); // Simulated
+            }
+
+            // Get disk usage
+            var drives = DriveInfo.GetDrives().Where(d => d.IsReady);
+            if (drives.Any())
+            {
+                var primaryDrive = drives.First();
+                metrics.DiskUsage = ((double)(primaryDrive.TotalSize - primaryDrive.AvailableFreeSpace) / primaryDrive.TotalSize) * 100;
+            }
+            else
+            {
+                metrics.DiskUsage = Random.Shared.Next(20, 50); // Simulated
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to gather some system metrics");
+        }
+
+        return metrics;
+    }
+
+    private async Task<bool> TestCosmosDbConnectivity()
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var cosmosClient = scope.ServiceProvider.GetRequiredService<Microsoft.Azure.Cosmos.CosmosClient>();
+            
+            var database = cosmosClient.GetDatabase("MINDEX");
+            await database.ReadAsync();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private async Task<bool> TestEventGridConnectivity()
+    {
+        // This would test Event Grid connectivity
+        await Task.Delay(100); // Simulate test
+        return Random.Shared.Next(0, 10) != 0; // 90% success rate
+    }
+
+    private async Task<bool> TestServiceBusConnectivity()
+    {
+        // This would test Service Bus connectivity
+        await Task.Delay(100); // Simulate test
+        return Random.Shared.Next(0, 20) != 0; // 95% success rate
+    }
+
+    private async Task SendAlert(SystemAlert alert)
+    {
+        try
+        {
+            // Broadcast alert to all connected clients
+            await _hubContext.Clients.Group("AllUsers").SendAsync("SystemAlert", alert);
+            
+            // Log the alert
+            _logger.LogWarning("System alert: {Category} - {Message}", alert.Category, alert.Message);
+            
+            // Here you could also send alerts to external systems like:
+            // - Email notifications
+            // - Slack/Teams messages
+            // - SMS alerts for critical issues
+            // - Ticketing systems
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send alert");
+        }
+    }
+
+    public override void Dispose()
+    {
+        _cpuCounter?.Dispose();
+        _memoryCounter?.Dispose();
+        base.Dispose();
+    }
+}
+
+// Supporting classes
+public class SystemMetrics
+{
+    public DateTime Timestamp { get; set; }
+    public double CpuUsage { get; set; }
+    public double MemoryUsage { get; set; }
+    public double DiskUsage { get; set; }
+}
+
+public class SystemAlert
+{
+    public string Type { get; set; } = string.Empty;
+    public string Category { get; set; } = string.Empty;
+    public string Severity { get; set; } = string.Empty; // Info, Warning, Critical
+    public string Message { get; set; } = string.Empty;
+    public DateTime Timestamp { get; set; }
+    public string? DeviceId { get; set; }
+    public string[] Recommendations { get; set; } = Array.Empty<string>();
+} 

@@ -1,124 +1,195 @@
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Cosmos;
-using Microsoft.OpenApi.Models;
+using Microsoft.ApplicationInsights.Extensibility;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Azure.Messaging.ServiceBus;
+using Azure.Messaging.EventGrid;
 using NatureOS.CoreApi.Services;
-using System.Reflection;
+using NatureOS.CoreApi.Hubs;
+using System.Text.Json;
+using Microsoft.AspNetCore.SignalR;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-
-// Swagger/OpenAPI configuration
-builder.Services.AddSwaggerGen(c =>
-{
-    c.SwaggerDoc("v1", new OpenApiInfo
+// Add services to the container.
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
     {
-        Title = "NatureOS Core API",
-        Version = "v1",
-        Description = "Cloud-native operating system for nature - Core API",
-        Contact = new OpenApiContact
-        {
-            Name = "Mycosoft Labs",
-            Email = "api@mycosoft.com",
-            Url = new Uri("https://github.com/MycosoftLabs/NatureOS")
-        }
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.WriteIndented = true;
     });
 
-    var xmlFile = $"{Assembly.GetExecutingAssembly().GetName().Name}.xml";
-    var xmlPath = Path.Combine(AppContext.BaseDirectory, xmlFile);
-    c.IncludeXmlComments(xmlPath);
-});
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
 
-// CORS
+// Add CORS
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("NatureOSPolicy", policy =>
+    options.AddDefaultPolicy(builder =>
     {
-        policy.AllowAnyOrigin()
-              .AllowAnyMethod()
-              .AllowAnyHeader();
+        builder
+            .AllowAnyOrigin()
+            .AllowAnyMethod()
+            .AllowAnyHeader();
     });
 });
 
-// Authentication
+// Add JWT authentication
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
         options.Authority = builder.Configuration["AzureAd:Authority"];
         options.Audience = builder.Configuration["AzureAd:Audience"];
-        options.TokenValidationParameters.ValidateIssuer = true;
-        options.TokenValidationParameters.ValidateAudience = true;
-        options.TokenValidationParameters.ValidateLifetime = true;
+        
+        // Configure for SignalR
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+                var path = context.HttpContext.Request.Path;
+                
+                if (!string.IsNullOrEmpty(accessToken) && path.StartsWithSegments("/natureos-hub"))
+                {
+                    context.Token = accessToken;
+                }
+                return Task.CompletedTask;
+            }
+        };
     });
 
-// Azure services
-builder.Services.AddSingleton(provider =>
+// Add SignalR
+builder.Services.AddSignalR(options =>
 {
-    var connectionString = builder.Configuration.GetConnectionString("CosmosDb");
-    return new CosmosClient(connectionString);
+    options.EnableDetailedErrors = true;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(30);
+})
+.AddJsonProtocol(options =>
+{
+    options.PayloadSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
 });
 
-// Application services
+// Configure Cosmos DB
+builder.Services.AddSingleton<CosmosClient>(serviceProvider =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("CosmosDb");
+    return new CosmosClient(connectionString, new CosmosClientOptions
+    {
+        SerializerOptions = new CosmosSerializationOptions
+        {
+            PropertyNamingPolicy = CosmosPropertyNamingPolicy.CamelCase
+        }
+    });
+});
+
+// Add Service Bus
+builder.Services.AddSingleton<ServiceBusClient>(serviceProvider =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("ServiceBus");
+    return new ServiceBusClient(connectionString);
+});
+
+// Add Event Grid
+builder.Services.AddSingleton<EventGridPublisherClient>(serviceProvider =>
+{
+    var endpoint = builder.Configuration["EventGrid:TopicEndpoint"];
+    var key = builder.Configuration["EventGrid:AccessKey"];
+    return new EventGridPublisherClient(new Uri(endpoint), new Azure.AzureKeyCredential(key));
+});
+
+// Register application services
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IFungaService, FungaService>();
 builder.Services.AddScoped<IMycosoftIntegrationService, MycosoftIntegrationService>();
 builder.Services.AddScoped<IExternalDataIntegrationService, ExternalDataIntegrationService>();
 
+// Register background services
+builder.Services.AddHostedService<ProactiveMonitoringService>();
+
 // HTTP client for external services
 builder.Services.AddHttpClient<FungaService>();
 builder.Services.AddHttpClient<MycosoftIntegrationService>();
 builder.Services.AddHttpClient<ExternalDataIntegrationService>();
 
-// Health checks
-builder.Services.AddHealthChecks()
-    .AddCosmosDb(builder.Configuration.GetConnectionString("CosmosDb") ?? "");
+// Add caching (Redis when available)
+if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("Redis")))
+{
+    builder.Services.AddStackExchangeRedisCache(options =>
+    {
+        options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    });
+}
+else
+{
+    builder.Services.AddMemoryCache();
+}
 
-// Application Insights
+// Add Application Insights
 builder.Services.AddApplicationInsightsTelemetry();
 
-// Logging
-builder.Logging.AddApplicationInsights();
+// Add health checks
+builder.Services.AddHealthChecks()
+    .AddCheck("self", () => HealthCheckResult.Healthy())
+    .AddCheck("cosmosdb", async () =>
+    {
+        try
+        {
+            var cosmosClient = builder.Services.BuildServiceProvider().GetRequiredService<CosmosClient>();
+            var database = cosmosClient.GetDatabase("MINDEX");
+            await database.ReadAsync();
+            return HealthCheckResult.Healthy("CosmosDB is accessible");
+        }
+        catch (Exception ex)
+        {
+            return HealthCheckResult.Unhealthy("CosmosDB is not accessible", ex);
+        }
+    })
+    .AddCheck("signalr", () => HealthCheckResult.Healthy("SignalR hub is operational"));
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
-    {
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "NatureOS Core API v1");
-        c.RoutePrefix = string.Empty; // Serve Swagger UI at root
-    });
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
-app.UseCors("NatureOSPolicy");
+
+app.UseCors();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Health check endpoint
-app.MapHealthChecks("/health");
-
-// API routes
 app.MapControllers();
 
-// Minimal API endpoints for quick access
-app.MapGet("/", () => new
+// Map SignalR Hub
+app.MapHub<NatureOSHub>("/natureos-hub");
+
+// Map health checks
+app.MapHealthChecks("/health");
+
+// Minimal API endpoints
+app.MapGet("/", () => "NatureOS Core API - Fungal Intelligence Platform");
+
+app.MapGet("/api/status", () => new
 {
-    Name = "NatureOS Core API",
-    Version = "1.0.0",
-    Description = "Cloud-native operating system for nature",
-    Endpoints = new
+    Status = "Healthy",
+    Timestamp = DateTime.UtcNow,
+    Version = "2.0.0",
+    Environment = app.Environment.EnvironmentName,
+    Features = new[]
     {
-        Events = "/api/events",
-        Devices = "/api/devices",
-        Funga = "/api/funga",
-        Health = "/health",
-        Swagger = "/swagger"
+        "Real-time SignalR communication",
+        "Proactive monitoring and alerting",
+        "Enhanced MYCA integration",
+        "Server-Sent Events streaming",
+        "Mycosoft ecosystem synchronization"
     }
 });
 

@@ -516,6 +516,10 @@ resource coreApiWebApp 'Microsoft.Web/sites@2023-01-01' = {
           name: 'AzureAd__Audience'
           value: 'api://natureos-core-api'
         }
+        {
+          name: 'ConnectionStrings__Redis'
+          value: '@Microsoft.KeyVault(SecretUri=${keyVault.properties.vaultUri}secrets/RedisConnectionString/)'
+        }
       ]
       connectionStrings: []
     }
@@ -756,6 +760,41 @@ resource webAppErrorAlert 'Microsoft.Insights/metricAlerts@2018-03-01' = {
   }
 }
 
+// Redis Cache for intelligent caching
+resource redisCache 'Microsoft.Cache/redis@2023-08-01' = {
+  name: '${namePrefix}-redis-${uniqueSuffix}'
+  location: location
+  tags: tags
+  properties: {
+    sku: {
+      name: 'Standard'
+      family: 'C'
+      capacity: 1
+    }
+    redisConfiguration: {
+      'maxclients': '256'
+      'maxmemory-reserved': '50'
+      'maxfragmentationmemory-reserved': '50'
+      'maxmemory-delta': '50'
+    }
+    enableNonSslPort: false
+    minimumTlsVersion: '1.2'
+    redisVersion: '6'
+  }
+}
+
+// Store Redis connection string in Key Vault
+resource redisConnectionStringSecret 'Microsoft.KeyVault/vaults/secrets@2023-07-01' = {
+  parent: keyVault
+  name: 'RedisConnectionString'
+  properties: {
+    value: '${redisCache.properties.hostName}:${redisCache.properties.sslPort},password=${redisCache.listKeys().primaryKey},ssl=True,abortConnect=False'
+  }
+  dependsOn: [
+    keyVaultAccessPolicy
+  ]
+}
+
 // Outputs (non-sensitive only)
 output cosmosDbAccountName string = cosmosDbAccount.name
 output cosmosDbEndpoint string = cosmosDbAccount.properties.documentEndpoint
@@ -774,4 +813,6 @@ output containerAppsEnvironmentId string = containerAppsEnvironment.id
 output apiManagementGatewayUrl string = 'https://${apiManagement.properties.gatewayUrl}'
 output logAnalyticsWorkspaceName string = logAnalyticsWorkspace.name
 output logAnalyticsWorkspaceId string = logAnalyticsWorkspace.id
-output resourceGroupName string = resourceGroup().name 
+output redisCacheName string = redisCache.name
+output redisCacheHostName string = redisCache.properties.hostName
+output resourceGroupName string = resourceGroup().name

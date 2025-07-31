@@ -1,0 +1,94 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>NatureOS.Ingestion</name>
+    </assembly>
+    <members>
+        <member name="T:NatureOS.Ingestion.IngestionFunction">
+            <summary>
+            Azure Function for ingesting IoT telemetry into the NatureOS event pipeline
+            </summary>
+        </member>
+        <member name="M:NatureOS.Ingestion.IngestionFunction.ProcessIoTMessage(System.String[],Microsoft.Azure.Functions.Worker.FunctionContext)">
+            <summary>
+            Process IoT Hub messages and convert them to Mycorrhizae Protocol events
+            </summary>
+            <param name="message">IoT Hub message</param>
+            <param name="context">Function context</param>
+        </member>
+        <member name="M:NatureOS.Ingestion.IngestionFunction.IngestEvent(Microsoft.Azure.Functions.Worker.Http.HttpRequestData,Microsoft.Azure.Functions.Worker.FunctionContext)">
+            <summary>
+            HTTP endpoint for manual event ingestion
+            </summary>
+            <param name="req">HTTP request</param>
+            <param name="context">Function context</param>
+            <returns>HTTP response</returns>
+        </member>
+        <member name="M:NatureOS.Ingestion.IngestionFunction.ProcessEnrichmentMessage(Azure.Messaging.ServiceBus.ServiceBusReceivedMessage,Microsoft.Azure.Functions.Worker.FunctionContext)">
+            <summary>
+            Process Service Bus messages for enrichment pipeline
+            </summary>
+            <param name="message">Service Bus message</param>
+            <param name="context">Function context</param>
+        </member>
+        <member name="T:NatureOS.Ingestion.IoTMessage">
+            <summary>
+            IoT message format from devices
+            </summary>
+        </member>
+        <member name="M:NatureOS.Ingestion.DirectFunctionExecutor.ExecuteAsync(Microsoft.Azure.Functions.Worker.FunctionContext)">
+            <inheritdoc/>
+        </member>
+        <member name="T:NatureOS.Ingestion.FunctionExecutorHostBuilderExtensions">
+            <summary>
+            Extension methods to enable registration of the custom <see cref="T:Microsoft.Azure.Functions.Worker.Invocation.IFunctionExecutor"/> implementation generated for the current worker.
+            </summary>
+        </member>
+        <member name="M:NatureOS.Ingestion.FunctionExecutorHostBuilderExtensions.ConfigureGeneratedFunctionExecutor(Microsoft.Extensions.Hosting.IHostBuilder)">
+            <summary>
+             Configures an optimized function executor to the invocation pipeline.
+            </summary>
+        </member>
+        <member name="T:NatureOS.Ingestion.FunctionExecutorAutoStartup">
+            <summary>
+            Auto startup class to register the custom <see cref="T:Microsoft.Azure.Functions.Worker.Invocation.IFunctionExecutor"/> implementation generated for the current worker.
+            </summary>
+        </member>
+        <member name="M:NatureOS.Ingestion.FunctionExecutorAutoStartup.Configure(Microsoft.Extensions.Hosting.IHostBuilder)">
+            <summary>
+            Configures the <see cref="T:Microsoft.Extensions.Hosting.IHostBuilder"/> to use the custom <see cref="T:Microsoft.Azure.Functions.Worker.Invocation.IFunctionExecutor"/> implementation generated for the current worker.
+            </summary>
+            <param name="hostBuilder">The <see cref="T:Microsoft.Extensions.Hosting.IHostBuilder"/> instance to use for service registration.</param>
+        </member>
+        <member name="T:NatureOS.Ingestion.GeneratedFunctionMetadataProvider">
+            <summary>
+            Custom <see cref="T:Microsoft.Azure.Functions.Worker.Core.FunctionMetadata.IFunctionMetadataProvider"/> implementation that returns function metadata definitions for the current worker."/>
+            </summary>
+        </member>
+        <member name="M:NatureOS.Ingestion.GeneratedFunctionMetadataProvider.GetFunctionMetadataAsync(System.String)">
+            <inheritdoc/>
+        </member>
+        <member name="T:NatureOS.Ingestion.WorkerHostBuilderFunctionMetadataProviderExtension">
+            <summary>
+            Extension methods to enable registration of the custom <see cref="T:Microsoft.Azure.Functions.Worker.Core.FunctionMetadata.IFunctionMetadataProvider"/> implementation generated for the current worker.
+            </summary>
+        </member>
+        <member name="M:NatureOS.Ingestion.WorkerHostBuilderFunctionMetadataProviderExtension.ConfigureGeneratedFunctionMetadataProvider(Microsoft.Extensions.Hosting.IHostBuilder)">
+            <summary>
+             Adds the GeneratedFunctionMetadataProvider to the service collection.
+             During initialization, the worker will return generated function metadata instead of relying on the Azure Functions host for function indexing.
+            </summary>
+        </member>
+        <member name="T:NatureOS.Ingestion.FunctionMetadataProviderAutoStartup">
+            <summary>
+            Auto startup class to register the custom <see cref="T:Microsoft.Azure.Functions.Worker.Core.FunctionMetadata.IFunctionMetadataProvider"/> implementation generated for the current worker.
+            </summary>
+        </member>
+        <member name="M:NatureOS.Ingestion.FunctionMetadataProviderAutoStartup.Configure(Microsoft.Extensions.Hosting.IHostBuilder)">
+            <summary>
+            Configures the <see cref="T:Microsoft.Extensions.Hosting.IHostBuilder"/> to use the custom <see cref="T:Microsoft.Azure.Functions.Worker.Core.FunctionMetadata.IFunctionMetadataProvider"/> implementation generated for the current worker.
+            </summary>
+            <param name="hostBuilder">The <see cref="T:Microsoft.Extensions.Hosting.IHostBuilder"/> instance to use for service registration.</param>
+        </member>
+    </members>
+</doc>

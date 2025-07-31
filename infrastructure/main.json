@@ -1,0 +1,937 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "_generator": {
+      "name": "bicep",
+      "version": "0.36.177.2456",
+      "templateHash": "2630775266880010368"
+    }
+  },
+  "parameters": {
+    "environment": {
+      "type": "string",
+      "defaultValue": "dev",
+      "metadata": {
+        "description": "Environment name (e.g., dev, staging, prod)"
+      }
+    },
+    "location": {
+      "type": "string",
+      "defaultValue": "[resourceGroup().location]",
+      "metadata": {
+        "description": "Primary Azure region for deployment"
+      }
+    },
+    "resourcePrefix": {
+      "type": "string",
+      "defaultValue": "natureos",
+      "metadata": {
+        "description": "Prefix for all resource names"
+      }
+    },
+    "tags": {
+      "type": "object",
+      "defaultValue": {
+        "project": "NatureOS",
+        "environment": "[parameters('environment')]",
+        "deployedBy": "Bicep"
+      },
+      "metadata": {
+        "description": "Tags to apply to all resources"
+      }
+    }
+  },
+  "variables": {
+    "uniqueSuffix": "[uniqueString(resourceGroup().id)]",
+    "namePrefix": "[format('{0}-{1}', parameters('resourcePrefix'), parameters('environment'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.KeyVault/vaults",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "sku": {
+          "family": "A",
+          "name": "standard"
+        },
+        "tenantId": "[subscription().tenantId]",
+        "accessPolicies": [],
+        "enabledForDeployment": true,
+        "enabledForTemplateDeployment": true,
+        "enabledForDiskEncryption": false,
+        "enableRbacAuthorization": true,
+        "enableSoftDelete": true,
+        "softDeleteRetentionInDays": 90,
+        "enablePurgeProtection": true
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts",
+      "apiVersion": "2023-11-15",
+      "name": "[format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "GlobalDocumentDB",
+      "properties": {
+        "databaseAccountOfferType": "Standard",
+        "enableMultipleWriteLocations": false,
+        "enableFreeTier": "[equals(parameters('environment'), 'dev')]",
+        "consistencyPolicy": {
+          "defaultConsistencyLevel": "Session"
+        },
+        "locations": [
+          {
+            "locationName": "[parameters('location')]",
+            "failoverPriority": 0,
+            "isZoneRedundant": false
+          }
+        ],
+        "capabilities": [
+          {
+            "name": "EnableServerless"
+          },
+          {
+            "name": "EnableGremlin"
+          }
+        ],
+        "backupPolicy": {
+          "type": "Periodic",
+          "periodicModeProperties": {
+            "backupIntervalInMinutes": 240,
+            "backupRetentionIntervalInHours": 8,
+            "backupStorageRedundancy": "Local"
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases",
+      "apiVersion": "2023-11-15",
+      "name": "[format('{0}/{1}', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'mindex')]",
+      "properties": {
+        "resource": {
+          "id": "mindex"
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-11-15",
+      "name": "[format('{0}/{1}/{2}', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'mindex', 'funga')]",
+      "properties": {
+        "resource": {
+          "id": "funga",
+          "partitionKey": {
+            "paths": [
+              "/kingdom_domain"
+            ],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "indexingMode": "consistent",
+            "automatic": true,
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ],
+            "excludedPaths": [
+              {
+                "path": "/signal_vector/*"
+              }
+            ]
+          },
+          "defaultTtl": -1
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'mindex')]"
+      ]
+    },
+    {
+      "type": "Microsoft.DocumentDB/databaseAccounts/sqlDatabases/containers",
+      "apiVersion": "2023-11-15",
+      "name": "[format('{0}/{1}/{2}', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'mindex', 'events')]",
+      "properties": {
+        "resource": {
+          "id": "events",
+          "partitionKey": {
+            "paths": [
+              "/source_device"
+            ],
+            "kind": "Hash"
+          },
+          "indexingPolicy": {
+            "indexingMode": "consistent",
+            "automatic": true,
+            "includedPaths": [
+              {
+                "path": "/*"
+              }
+            ]
+          },
+          "defaultTtl": 7776000
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts/sqlDatabases', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'mindex')]"
+      ]
+    },
+    {
+      "type": "Microsoft.Devices/IotHubs",
+      "apiVersion": "2023-06-30",
+      "name": "[format('{0}-iothub-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "S1",
+        "capacity": 1
+      },
+      "properties": {
+        "eventHubEndpoints": {
+          "events": {
+            "retentionTimeInDays": 1,
+            "partitionCount": 2
+          }
+        },
+        "routing": {
+          "endpoints": {
+            "eventHubs": [],
+            "serviceBusQueues": [],
+            "serviceBusTopics": [],
+            "storageContainers": []
+          },
+          "routes": [],
+          "fallbackRoute": {
+            "name": "$fallback",
+            "source": "DeviceMessages",
+            "condition": "true",
+            "endpointNames": [
+              "events"
+            ],
+            "isEnabled": true
+          }
+        },
+        "messagingEndpoints": {
+          "fileNotifications": {
+            "lockDurationAsIso8601": "PT1M",
+            "ttlAsIso8601": "PT1H",
+            "maxDeliveryCount": 10
+          }
+        },
+        "enableFileUploadNotifications": false,
+        "cloudToDevice": {
+          "maxDeliveryCount": 10,
+          "defaultTtlAsIso8601": "PT1H",
+          "feedback": {
+            "lockDurationAsIso8601": "PT1M",
+            "ttlAsIso8601": "PT1H",
+            "maxDeliveryCount": 10
+          }
+        }
+      }
+    },
+    {
+      "type": "Microsoft.EventGrid/topics",
+      "apiVersion": "2023-12-15-preview",
+      "name": "[format('{0}-eventgrid-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "inputSchema": "EventGridSchema",
+        "publicNetworkAccess": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces",
+      "apiVersion": "2022-10-01-preview",
+      "name": "[format('{0}-servicebus-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Standard"
+      },
+      "properties": {
+        "minimumTlsVersion": "1.2",
+        "publicNetworkAccess": "Enabled",
+        "disableLocalAuth": false
+      }
+    },
+    {
+      "type": "Microsoft.ServiceBus/namespaces/queues",
+      "apiVersion": "2022-10-01-preview",
+      "name": "[format('{0}/{1}', format('{0}-servicebus-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'mycorrhizae-events')]",
+      "properties": {
+        "lockDuration": "PT5M",
+        "maxSizeInMegabytes": 1024,
+        "requiresDuplicateDetection": false,
+        "requiresSession": false,
+        "defaultMessageTimeToLive": "P14D",
+        "deadLetteringOnMessageExpiration": true,
+        "duplicateDetectionHistoryTimeWindow": "PT10M",
+        "maxDeliveryCount": 10,
+        "enablePartitioning": false,
+        "enableExpress": false
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.ServiceBus/namespaces', format('{0}-servicebus-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Standard_LRS"
+      },
+      "kind": "StorageV2",
+      "properties": {
+        "minimumTlsVersion": "TLS1_2",
+        "allowBlobPublicAccess": false,
+        "allowSharedKeyAccess": true,
+        "networkAcls": {
+          "bypass": "AzureServices",
+          "virtualNetworkRules": [],
+          "ipRules": [],
+          "defaultAction": "Allow"
+        },
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+          "services": {
+            "file": {
+              "keyType": "Account",
+              "enabled": true
+            },
+            "blob": {
+              "keyType": "Account",
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        },
+        "accessTier": "Hot"
+      }
+    },
+    {
+      "type": "Microsoft.Insights/components",
+      "apiVersion": "2020-02-02",
+      "name": "[format('{0}-appinsights-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "web",
+      "properties": {
+        "Application_Type": "web",
+        "Flow_Type": "Redfield",
+        "Request_Source": "IbizaAIExtension",
+        "RetentionInDays": 90,
+        "WorkspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "IngestionMode": "LogAnalytics",
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.OperationalInsights/workspaces",
+      "apiVersion": "2022-10-01",
+      "name": "[format('{0}-logs-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "sku": {
+          "name": "PerGB2018"
+        },
+        "retentionInDays": 90,
+        "features": {
+          "enableLogAccessUsingOnlyResourcePermissions": true
+        },
+        "workspaceCapping": {
+          "dailyQuotaGb": -1
+        },
+        "publicNetworkAccessForIngestion": "Enabled",
+        "publicNetworkAccessForQuery": "Enabled"
+      }
+    },
+    {
+      "type": "Microsoft.App/managedEnvironments",
+      "apiVersion": "2023-05-01",
+      "name": "[format('{0}-containerenv-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "appLogsConfiguration": {
+          "destination": "log-analytics",
+          "logAnalyticsConfiguration": {
+            "customerId": "[reference(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2022-10-01').customerId]",
+            "sharedKey": "[listKeys(resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2022-10-01').primarySharedKey]"
+          }
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.ApiManagement/service",
+      "apiVersion": "2023-05-01-preview",
+      "name": "[format('{0}-apim-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "Developer",
+        "capacity": 1
+      },
+      "properties": {
+        "publisherName": "Mycosoft Labs",
+        "publisherEmail": "admin@mycosoft.com",
+        "notificationSenderEmail": "apimgmt-noreply@mail.windowsazure.com",
+        "hostnameConfigurations": [
+          {
+            "type": "Proxy",
+            "hostName": "[format('{0}-apim-{1}.azure-api.net', variables('namePrefix'), variables('uniqueSuffix'))]",
+            "negotiateClientCertificate": false,
+            "defaultSslBinding": true,
+            "certificateSource": "BuiltIn"
+          }
+        ],
+        "customProperties": {
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls10": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Tls11": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Protocols.Ssl30": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls10": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Tls11": "False",
+          "Microsoft.WindowsAzure.ApiManagement.Gateway.Security.Backend.Protocols.Ssl30": "False"
+        },
+        "virtualNetworkType": "None",
+        "disableGateway": false,
+        "natGatewayState": "Unsupported"
+      }
+    },
+    {
+      "type": "Microsoft.Web/serverfarms",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}-asp-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "sku": {
+        "name": "B1",
+        "tier": "Basic",
+        "size": "B1",
+        "family": "B",
+        "capacity": 1
+      },
+      "properties": {
+        "perSiteScaling": false,
+        "elasticScaleEnabled": false,
+        "maximumElasticWorkerCount": 1,
+        "isSpot": false,
+        "reserved": false,
+        "isXenon": false,
+        "hyperV": false,
+        "targetWorkerCount": 0,
+        "targetWorkerSizeId": 0,
+        "zoneRedundant": false
+      }
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}-coreapi-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-asp-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "netFrameworkVersion": "v8.0",
+          "scmType": "None",
+          "use32BitWorkerProcess": false,
+          "alwaysOn": true,
+          "managedPipelineMode": "Integrated",
+          "virtualApplications": [
+            {
+              "virtualPath": "/",
+              "physicalPath": "site\\wwwroot",
+              "preloadEnabled": true
+            }
+          ],
+          "loadBalancing": "LeastRequests",
+          "experiments": {
+            "rampUpRules": []
+          },
+          "autoHealEnabled": false,
+          "vnetRouteAllEnabled": false,
+          "vnetPrivatePortsCount": 0,
+          "localMySqlEnabled": false,
+          "ipSecurityRestrictions": [
+            {
+              "ipAddress": "Any",
+              "action": "Allow",
+              "priority": 2147483647,
+              "name": "Allow all",
+              "description": "Allow all access"
+            }
+          ],
+          "scmIpSecurityRestrictions": [
+            {
+              "ipAddress": "Any",
+              "action": "Allow",
+              "priority": 2147483647,
+              "name": "Allow all",
+              "description": "Allow all access"
+            }
+          ],
+          "scmIpSecurityRestrictionsUseMain": false,
+          "http20Enabled": false,
+          "minTlsVersion": "1.2",
+          "scmMinTlsVersion": "1.2",
+          "ftpsState": "FtpsOnly",
+          "preWarmedInstanceCount": 0,
+          "functionAppScaleLimit": 0,
+          "functionsRuntimeScaleMonitoringEnabled": false,
+          "minimumElasticInstanceCount": 0,
+          "azureStorageAccounts": {},
+          "appSettings": [
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-appinsights-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2020-02-02').InstrumentationKey]"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-appinsights-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2020-02-02').ConnectionString]"
+            },
+            {
+              "name": "ApplicationInsightsAgent_EXTENSION_VERSION",
+              "value": "~3"
+            },
+            {
+              "name": "XDT_MicrosoftApplicationInsights_Mode",
+              "value": "Recommended"
+            },
+            {
+              "name": "ASPNETCORE_ENVIRONMENT",
+              "value": "[if(equals(parameters('environment'), 'prod'), 'Production', 'Development')]"
+            },
+            {
+              "name": "ConnectionStrings__CosmosDb",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/CosmosDbConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "ConnectionStrings__ServiceBus",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/ServiceBusConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "ConnectionStrings__IoTHub",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/IoTHubConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "ConnectionStrings__EventGrid",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/EventGridConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "ConnectionStrings__Storage",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/StorageConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "AzureAd__TenantId",
+              "value": "[subscription().tenantId]"
+            },
+            {
+              "name": "AzureAd__ClientId",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/AzureAdClientId/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "AzureAd__ClientSecret",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/AzureAdClientSecret/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "AzureAd__Authority",
+              "value": "[format('{0}{1}', environment().authentication.loginEndpoint, subscription().tenantId)]"
+            },
+            {
+              "name": "AzureAd__Audience",
+              "value": "api://natureos-core-api"
+            }
+          ],
+          "connectionStrings": []
+        },
+        "scmSiteAlsoStopped": false,
+        "clientAffinityEnabled": false,
+        "clientCertEnabled": false,
+        "clientCertMode": "Required",
+        "hostNamesDisabled": false,
+        "containerSize": 0,
+        "dailyMemoryTimeQuota": 0,
+        "redundancyMode": "None",
+        "storageAccountRequired": false,
+        "keyVaultReferenceIdentity": "SystemAssigned"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', format('{0}-appinsights-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.Web/serverfarms', format('{0}-asp-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/accessPolicies",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'add')]",
+      "properties": {
+        "accessPolicies": [
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', format('{0}-coreapi-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-01-01', 'full').identity.principalId]",
+            "permissions": {
+              "secrets": [
+                "Get"
+              ],
+              "certificates": [
+                "Get"
+              ]
+            }
+          },
+          {
+            "tenantId": "[subscription().tenantId]",
+            "objectId": "[reference(resourceId('Microsoft.Web/sites', format('{0}-func-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-01-01', 'full').identity.principalId]",
+            "permissions": {
+              "secrets": [
+                "Get"
+              ],
+              "certificates": [
+                "Get"
+              ]
+            }
+          }
+        ]
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', format('{0}-coreapi-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.Web/sites', format('{0}-func-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'CosmosDbConnectionString')]",
+      "properties": {
+        "value": "[listConnectionStrings(resourceId('Microsoft.DocumentDB/databaseAccounts', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-11-15').connectionStrings[0].connectionString]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'ServiceBusConnectionString')]",
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.ServiceBus/namespaces', format('{0}-servicebus-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2022-10-01-preview').value[0].connectionString]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.ServiceBus/namespaces', format('{0}-servicebus-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'IoTHubConnectionString')]",
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.Devices/IotHubs', format('{0}-iothub-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-06-30').value[0].connectionString]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Devices/IotHubs', format('{0}-iothub-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'EventGridConnectionString')]",
+      "properties": {
+        "value": "[listKeys(resourceId('Microsoft.EventGrid/topics', format('{0}-eventgrid-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-12-15-preview').key1]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.EventGrid/topics', format('{0}-eventgrid-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.KeyVault/vaults/secrets",
+      "apiVersion": "2023-07-01",
+      "name": "[format('{0}/{1}', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')), 'StorageConnectionString')]",
+      "properties": {
+        "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix')), listKeys(resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix'))), '2023-01-01').keys[0].value, environment().suffixes.storage)]"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Web/sites",
+      "apiVersion": "2023-01-01",
+      "name": "[format('{0}-func-{1}', variables('namePrefix'), variables('uniqueSuffix'))]",
+      "location": "[parameters('location')]",
+      "tags": "[parameters('tags')]",
+      "kind": "functionapp",
+      "identity": {
+        "type": "SystemAssigned"
+      },
+      "properties": {
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', format('{0}-asp-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "httpsOnly": true,
+        "siteConfig": {
+          "netFrameworkVersion": "v8.0",
+          "scmType": "None",
+          "use32BitWorkerProcess": false,
+          "alwaysOn": true,
+          "managedPipelineMode": "Integrated",
+          "appSettings": [
+            {
+              "name": "AzureWebJobsStorage",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix')), listKeys(resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix'))), '2023-01-01').keys[0].value, environment().suffixes.storage)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTAZUREFILECONNECTIONSTRING",
+              "value": "[format('DefaultEndpointsProtocol=https;AccountName={0};AccountKey={1};EndpointSuffix={2}', format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix')), listKeys(resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix'))), '2023-01-01').keys[0].value, environment().suffixes.storage)]"
+            },
+            {
+              "name": "WEBSITE_CONTENTSHARE",
+              "value": "[toLower(format('{0}-func-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+            },
+            {
+              "name": "FUNCTIONS_EXTENSION_VERSION",
+              "value": "~4"
+            },
+            {
+              "name": "FUNCTIONS_WORKER_RUNTIME",
+              "value": "dotnet-isolated"
+            },
+            {
+              "name": "APPINSIGHTS_INSTRUMENTATIONKEY",
+              "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-appinsights-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2020-02-02').InstrumentationKey]"
+            },
+            {
+              "name": "APPLICATIONINSIGHTS_CONNECTION_STRING",
+              "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-appinsights-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2020-02-02').ConnectionString]"
+            },
+            {
+              "name": "CosmosDbConnectionString",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/CosmosDbConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "ServiceBusConnectionString",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/ServiceBusConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "IoTHubConnectionString",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/IoTHubConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            },
+            {
+              "name": "EventGridConnectionString",
+              "value": "[format('@Microsoft.KeyVault(SecretUri={0}secrets/EventGridConnectionString/)', reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri)]"
+            }
+          ]
+        },
+        "keyVaultReferenceIdentity": "SystemAssigned"
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Insights/components', format('{0}-appinsights-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.Web/serverfarms', format('{0}-asp-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix')))]",
+        "[resourceId('Microsoft.Storage/storageAccounts', format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "[format('{0}-cosmosdb-ru-alert', variables('namePrefix'))]",
+      "location": "global",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Alert when Cosmos DB RU consumption is high",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "HighRUConsumption",
+              "metricName": "TotalRequestUnits",
+              "operator": "GreaterThan",
+              "threshold": 1000,
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.DocumentDB/databaseAccounts', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "[format('{0}-webapp-cpu-alert', variables('namePrefix'))]",
+      "location": "global",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Alert when Web App CPU usage is high",
+        "severity": 2,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Web/sites', format('{0}-coreapi-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "HighCPUUsage",
+              "metricName": "CpuPercentage",
+              "operator": "GreaterThan",
+              "threshold": 80,
+              "timeAggregation": "Average",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', format('{0}-coreapi-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    },
+    {
+      "type": "Microsoft.Insights/metricAlerts",
+      "apiVersion": "2018-03-01",
+      "name": "[format('{0}-webapp-error-alert', variables('namePrefix'))]",
+      "location": "global",
+      "tags": "[parameters('tags')]",
+      "properties": {
+        "description": "Alert when Web App has high error rate",
+        "severity": 1,
+        "enabled": true,
+        "scopes": [
+          "[resourceId('Microsoft.Web/sites', format('{0}-coreapi-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+        ],
+        "evaluationFrequency": "PT1M",
+        "windowSize": "PT5M",
+        "criteria": {
+          "odata.type": "Microsoft.Azure.Monitor.SingleResourceMultipleMetricCriteria",
+          "allOf": [
+            {
+              "name": "HighErrorRate",
+              "metricName": "Http5xx",
+              "operator": "GreaterThan",
+              "threshold": 5,
+              "timeAggregation": "Total",
+              "criterionType": "StaticThresholdCriterion"
+            }
+          ]
+        }
+      },
+      "dependsOn": [
+        "[resourceId('Microsoft.Web/sites', format('{0}-coreapi-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+      ]
+    }
+  ],
+  "outputs": {
+    "cosmosDbAccountName": {
+      "type": "string",
+      "value": "[format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix'))]"
+    },
+    "cosmosDbEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.DocumentDB/databaseAccounts', format('{0}-cosmos-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-11-15').documentEndpoint]"
+    },
+    "iotHubName": {
+      "type": "string",
+      "value": "[format('{0}-iothub-{1}', variables('namePrefix'), variables('uniqueSuffix'))]"
+    },
+    "eventGridTopicEndpoint": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.EventGrid/topics', format('{0}-eventgrid-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-12-15-preview').endpoint]"
+    },
+    "storageAccountName": {
+      "type": "string",
+      "value": "[format('{0}{1}st{2}', parameters('resourcePrefix'), parameters('environment'), variables('uniqueSuffix'))]"
+    },
+    "applicationInsightsInstrumentationKey": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-appinsights-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2020-02-02').InstrumentationKey]"
+    },
+    "applicationInsightsConnectionString": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.Insights/components', format('{0}-appinsights-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2020-02-02').ConnectionString]"
+    },
+    "coreApiWebAppName": {
+      "type": "string",
+      "value": "[format('{0}-coreapi-{1}', variables('namePrefix'), variables('uniqueSuffix'))]"
+    },
+    "coreApiWebAppUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', format('{0}-coreapi-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-01-01').defaultHostName)]"
+    },
+    "functionAppName": {
+      "type": "string",
+      "value": "[format('{0}-func-{1}', variables('namePrefix'), variables('uniqueSuffix'))]"
+    },
+    "functionAppUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.Web/sites', format('{0}-func-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-01-01').defaultHostName)]"
+    },
+    "keyVaultName": {
+      "type": "string",
+      "value": "[format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))]"
+    },
+    "keyVaultUri": {
+      "type": "string",
+      "value": "[reference(resourceId('Microsoft.KeyVault/vaults', format('{0}-kv-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-07-01').vaultUri]"
+    },
+    "containerAppsEnvironmentId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.App/managedEnvironments', format('{0}-containerenv-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+    },
+    "apiManagementGatewayUrl": {
+      "type": "string",
+      "value": "[format('https://{0}', reference(resourceId('Microsoft.ApiManagement/service', format('{0}-apim-{1}', variables('namePrefix'), variables('uniqueSuffix'))), '2023-05-01-preview').gatewayUrl)]"
+    },
+    "logAnalyticsWorkspaceName": {
+      "type": "string",
+      "value": "[format('{0}-logs-{1}', variables('namePrefix'), variables('uniqueSuffix'))]"
+    },
+    "logAnalyticsWorkspaceId": {
+      "type": "string",
+      "value": "[resourceId('Microsoft.OperationalInsights/workspaces', format('{0}-logs-{1}', variables('namePrefix'), variables('uniqueSuffix')))]"
+    },
+    "resourceGroupName": {
+      "type": "string",
+      "value": "[resourceGroup().name]"
+    }
+  }
+}
