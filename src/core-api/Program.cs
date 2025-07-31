@@ -100,33 +100,31 @@ builder.Services.AddSingleton<EventGridPublisherClient>(serviceProvider =>
     return new EventGridPublisherClient(new Uri(endpoint), new Azure.AzureKeyCredential(key));
 });
 
-// Register application services
+// Register services
 builder.Services.AddScoped<IEventService, EventService>();
 builder.Services.AddScoped<IDeviceService, DeviceService>();
 builder.Services.AddScoped<IFungaService, FungaService>();
 builder.Services.AddScoped<IMycosoftIntegrationService, MycosoftIntegrationService>();
 builder.Services.AddScoped<IExternalDataIntegrationService, ExternalDataIntegrationService>();
+builder.Services.AddSingleton<IProactiveMonitoringService, ProactiveMonitoringService>(); // Registered as singleton
 
-// Register background services
-builder.Services.AddHostedService<ProactiveMonitoringService>();
+// Register caching services
+builder.Services.AddScoped<ICacheService, CacheService>();
+builder.Services.AddHostedService<CacheWarmupService>();
 
 // HTTP client for external services
 builder.Services.AddHttpClient<FungaService>();
 builder.Services.AddHttpClient<MycosoftIntegrationService>();
 builder.Services.AddHttpClient<ExternalDataIntegrationService>();
 
-// Add caching (Redis when available)
-if (!string.IsNullOrEmpty(builder.Configuration.GetConnectionString("Redis")))
+// Add Redis caching
+builder.Services.AddStackExchangeRedisCache(options =>
 {
-    builder.Services.AddStackExchangeRedisCache(options =>
-    {
-        options.Configuration = builder.Configuration.GetConnectionString("Redis");
-    });
-}
-else
-{
-    builder.Services.AddMemoryCache();
-}
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+});
+
+// Add SignalR
+builder.Services.AddSignalR();
 
 // Add Application Insights
 builder.Services.AddApplicationInsightsTelemetry();

@@ -1,0 +1,17 @@
+# NatureOS API Configuration
+NEXT_PUBLIC_NATUREOS_API_URL=https://natureos-api-production.azurewebsites.net
+NEXT_PUBLIC_SIGNALR_HUB_URL=https://natureos-api-production.azurewebsites.net/natureos-hub
+
+# Feature Flags
+NEXT_PUBLIC_ENABLE_REALTIME=true
+NEXT_PUBLIC_ENABLE_MYCA=true
+NEXT_PUBLIC_ENABLE_DEVICE_MONITORING=true
+NEXT_PUBLIC_ENABLE_EXTERNAL_DATA=true
+
+# Development Settings
+NEXT_PUBLIC_DEBUG_MODE=false
+NEXT_PUBLIC_LOG_LEVEL=info
+
+# API Keys (replace with actual values)
+NEXT_PUBLIC_MAPS_API_KEY=your_maps_api_key_here
+NEXT_PUBLIC_ANALYTICS_ID=your_analytics_id_here 

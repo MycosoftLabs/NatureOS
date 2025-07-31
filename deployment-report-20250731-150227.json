@@ -1,0 +1,19 @@
+﻿{
+    "Timestamp":  {
+                      "value":  "\/Date(1753999347873)\/",
+                      "DisplayHint":  2,
+                      "DateTime":  "Thursday, July 31, 2025 3:02:27 PM"
+                  },
+    "OverallSuccess":  false,
+    "ResourceGroup":  "natureos-production-rg",
+    "Environment":  "production",
+    "TestResults":  {
+                        "CoreComponents":  true,
+                        "DeviceIntegration":  false,
+                        "WebsiteIntegration":  false,
+                        "Infrastructure":  true
+                    },
+    "FunctionUrl":  "https://natureos-ingestion-production.azurewebsites.net",
+    "DeploymentSuccess":  true,
+    "ApiUrl":  "https://natureos-api-production.azurewebsites.net"
+}
