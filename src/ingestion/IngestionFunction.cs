@@ -57,8 +57,14 @@ public class IngestionFunction
                     continue;
                 }
 
-                // Convert to Mycorrhizae Protocol event
+                // Convert to Mycorrhizae Protocol event (enforce data_type/schema_version where present)
                 var mycorrhizaeEvent = ConvertToMycorrhizaeEvent(iotMessage);
+                // Ensure standard contract markers
+                iotMessage.Properties ??= new Dictionary<string, object>();
+                if (!iotMessage.Properties.ContainsKey("data_type"))
+                    iotMessage.Properties["data_type"] = GuessDataType(iotMessage);
+                if (!iotMessage.Properties.ContainsKey("schema_version"))
+                    iotMessage.Properties["schema_version"] = "1";
 
                 // Store in MINDEX
                 await StoreEventAsync(mycorrhizaeEvent);
@@ -215,6 +221,16 @@ public class IngestionFunction
 
         // Default to FUNGA for now
         return "FUNGA.unknown";
+    }
+
+    private static string GuessDataType(IoTMessage iotMessage)
+    {
+        if (iotMessage.Telemetry is JsonElement json)
+        {
+            if (json.TryGetProperty("bioelectric_channels", out _)) return "fci.v1";
+            if (json.TryGetProperty("temperature", out _) || json.TryGetProperty("humidity", out _)) return "env.v1";
+        }
+        return "unknown";
     }
 
     private static double CalculateQualityScore(IoTMessage iotMessage)

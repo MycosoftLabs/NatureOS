@@ -17,7 +17,7 @@ param(
     [switch]$SkipTests = $false,
     
     [Parameter(Mandatory=$false)]
-    [switch]$DeployOnly = $false,
+638.401    [switch]$DeployOnly = $false,
     
     [Parameter(Mandatory=$false)]
     [switch]$TestOnly = $false

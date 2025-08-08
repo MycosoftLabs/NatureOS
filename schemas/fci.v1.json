@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.natureos.ai/fci.v1.json",
+  "title": "Fungal Communication Interface v1",
+  "type": "object",
+  "properties": {
+    "data_type": { "const": "fci.v1" },
+    "schema_version": { "type": "string", "const": "1" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "device_id": { "type": "string" },
+    "bioelectric_channels": {
+      "type": "array",
+      "items": { "type": "number" },
+      "minItems": 1
+    },
+    "sampling_rate_hz": { "type": "number" },
+    "metadata": { "type": "object" }
+  },
+  "required": ["data_type", "schema_version", "timestamp", "device_id", "bioelectric_channels"]
+}

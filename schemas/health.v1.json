@@ -1,0 +1,15 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://schemas.natureos.ai/health.v1.json",
+  "title": "System Health v1",
+  "type": "object",
+  "properties": {
+    "data_type": { "const": "health.v1" },
+    "schema_version": { "type": "string", "const": "1" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "service": { "type": "string" },
+    "status": { "type": "string", "enum": ["ok", "degraded", "down"] },
+    "metrics": { "type": "object" }
+  },
+  "required": ["data_type", "schema_version", "timestamp", "service", "status"]
+}

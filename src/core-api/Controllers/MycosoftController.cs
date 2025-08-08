@@ -18,6 +18,7 @@ public class MycosoftController : ControllerBase
     private readonly IDeviceService _deviceService;
     private readonly IFungaService _fungaService;
     private readonly IHubContext<NatureOSHub> _hubContext;
+    private readonly IMasIngestionService _masIngestionService;
     private readonly ILogger<MycosoftController> _logger;
 
     public MycosoftController(
@@ -26,6 +27,7 @@ public class MycosoftController : ControllerBase
         IDeviceService deviceService,
         IFungaService fungaService,
         IHubContext<NatureOSHub> hubContext,
+        IMasIngestionService masIngestionService,
         ILogger<MycosoftController> logger)
     {
         _integrationService = integrationService;
@@ -33,6 +35,7 @@ public class MycosoftController : ControllerBase
         _deviceService = deviceService;
         _fungaService = fungaService;
         _hubContext = hubContext;
+        _masIngestionService = masIngestionService;
         _logger = logger;
     }
 
@@ -77,6 +80,32 @@ public class MycosoftController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error in event stream");
+        }
+    }
+
+    /// <summary>
+    /// Ingest website or service context into MAS knowledge graph
+    /// </summary>
+    [HttpPost("mas/ingest")]
+    public async Task<IActionResult> IngestMasContext([FromBody] object payload)
+    {
+        try
+        {
+            var ok = await _masIngestionService.IngestContextAsync(payload);
+            if (!ok) return StatusCode(500, new { error = "Failed to ingest context" });
+            
+            await _hubContext.Clients.Group("MycaUsers").SendAsync("SystemUpdate", new
+            {
+                Type = "MASContextIngested",
+                Timestamp = DateTime.UtcNow
+            });
+            
+            return Ok(new { status = "ok" });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error ingesting MAS context");
+            return StatusCode(500, new { error = ex.Message });
         }
     }
 
