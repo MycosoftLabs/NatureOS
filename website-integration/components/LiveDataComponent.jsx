@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { HubConnectionBuilder, LogLevel } from '@microsoft/signalr';
 
 export default function LiveDataComponent() {
   const [liveData, setLiveData] = useState(null);
@@ -29,11 +30,42 @@ export default function LiveDataComponent() {
     }
   }, []);
 
-  // Set up real-time updates
+  // Set up real-time updates via SignalR
   useEffect(() => {
-    fetchLiveData();
-    const interval = setInterval(fetchLiveData, 5000); // Update every 5 seconds
-    return () => clearInterval(interval);
+    // Create SignalR connection to NatureOS hub
+    const connection = new HubConnectionBuilder()
+      .withUrl('/natureos-hub')
+      .withAutomaticReconnect()
+      .configureLogging(LogLevel.Information)
+      .build();
+
+    const startConnection = async () => {
+      try {
+        await connection.start();
+        setIsConnected(true);
+
+        // Join dashboard group to receive updates
+        await connection.invoke('JoinDashboardGroup');
+
+        // Fetch initial data once connected
+        await fetchLiveData();
+
+        // Refresh data when the server signals updates
+        connection.on('DeviceUpdate', fetchLiveData);
+        connection.on('SimulationUpdate', fetchLiveData);
+        connection.on('SystemUpdate', fetchLiveData);
+        connection.onclose(() => setIsConnected(false));
+      } catch (err) {
+        setError(err.message);
+        setIsConnected(false);
+      }
+    };
+
+    startConnection();
+
+    return () => {
+      connection.stop();
+    };
   }, [fetchLiveData]);
 
   if (!liveData) {
