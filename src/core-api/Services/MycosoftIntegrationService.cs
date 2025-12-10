@@ -49,7 +49,7 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
             var mycorrhizaeEvent = ConvertToMycorrhizaeEvent(telemetryData, "mushroom1");
 
             // Store in MINDEX
-            var database = _cosmosClient.GetDatabase("MINDEX");
+            var database = _cosmosClient.GetDatabase("mindex");
             var eventsContainer = database.GetContainer("events");
             await eventsContainer.CreateItemAsync(mycorrhizaeEvent, new PartitionKey(mycorrhizaeEvent.SourceDevice));
 
@@ -521,7 +521,7 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
         try
         {
             // Update device status in database
-            var database = _cosmosClient.GetDatabase("MINDEX");
+            var database = _cosmosClient.GetDatabase("mindex");
             var devicesContainer = database.GetContainer("devices");
             
             // This would update the actual device record

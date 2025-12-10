@@ -107,7 +107,8 @@ builder.Services.AddScoped<IFungaService, FungaService>();
 builder.Services.AddScoped<IMycosoftIntegrationService, MycosoftIntegrationService>();
 builder.Services.AddScoped<IExternalDataIntegrationService, ExternalDataIntegrationService>();
 builder.Services.AddScoped<IMasIngestionService, MasIngestionService>();
-builder.Services.AddSingleton<IProactiveMonitoringService, ProactiveMonitoringService>(); // Registered as singleton
+// Register background services
+builder.Services.AddHostedService<ProactiveMonitoringService>();
 
 // Register caching services
 builder.Services.AddScoped<ICacheService, CacheService>();
