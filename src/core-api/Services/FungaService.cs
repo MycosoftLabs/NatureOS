@@ -18,7 +18,7 @@ public class FungaService : IFungaService
     {
         _logger = logger;
         _httpClient = httpClient;
-        var database = cosmosClient.GetDatabase("MINDEX");
+        var database = cosmosClient.GetDatabase("mindex");
         _eventsContainer = database.GetContainer("events");
         _taxonomyContainer = database.GetContainer("taxonomy");
     }

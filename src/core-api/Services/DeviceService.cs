@@ -15,7 +15,7 @@ public class DeviceService : IDeviceService
     public DeviceService(CosmosClient cosmosClient, ILogger<DeviceService> logger)
     {
         _logger = logger;
-        var database = cosmosClient.GetDatabase("MINDEX");
+        var database = cosmosClient.GetDatabase("mindex");
         _devicesContainer = database.GetContainer("devices");
     }
 

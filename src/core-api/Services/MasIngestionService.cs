@@ -22,7 +22,7 @@ public class MasIngestionService : IMasIngestionService
     {
         try
         {
-            var database = _cosmosClient.GetDatabase("MINDEX");
+            var database = _cosmosClient.GetDatabase("mindex");
             var container = database.GetContainer("mas_events");
 
             var projection = new
@@ -53,7 +53,7 @@ public class MasIngestionService : IMasIngestionService
     {
         try
         {
-            var database = _cosmosClient.GetDatabase("MINDEX");
+            var database = _cosmosClient.GetDatabase("mindex");
             var container = database.GetContainer("mas_context");
 
             var document = new
