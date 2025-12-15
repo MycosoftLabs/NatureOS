@@ -1,4 +1,4 @@
-# NatureOS
+﻿# NatureOS
 
 NatureOS is a cloud-native "operating system for nature" - a layered Azure architecture that ingests heterogeneous environmental signals, stores them in the multi-model MINDEX database, processes them with event-driven algorithms such as the Mycorrhizae Protocol, and exposes everything through a unified Core API.
 
@@ -9,33 +9,33 @@ Provide a single, trusted cloud platform where biological, chemical, and ecologi
 ## Architecture Overview
 
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Edge Devices   │───▶│  Event Backbone │───▶│  MINDEX Storage │
-│  (IoT Hub)      │    │  (Event Grid)   │    │  (Cosmos DB)    │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-                                │
-                                ▼
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Applications   │◀───│    Core API     │◀───│  AI/ML Pipeline │
-│  (Dashboard)    │    │  (API Mgmt)     │    │  (MYCA Agents)  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  Edge Devices   â”‚â”€â”€â”€â–¶â”‚  Event Backbone â”‚â”€â”€â”€â–¶â”‚  MINDEX Storage â”‚
+â”‚  (IoT Hub)      â”‚    â”‚  (Event Grid)   â”‚    â”‚  (Cosmos DB)    â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
+                                â”‚
+                                â–¼
+â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”    â”Œâ”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”
+â”‚  Applications   â”‚â—€â”€â”€â”€â”‚    Core API     â”‚â—€â”€â”€â”€â”‚  AI/ML Pipeline â”‚
+â”‚  (Dashboard)    â”‚    â”‚  (API Mgmt)     â”‚    â”‚  (MYCA Agents)  â”‚
+â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜    â””â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”˜
 ```
 
 ## Project Structure
 
 ```
 NatureOS/
-├── infrastructure/          # Azure Bicep/ARM templates
-├── src/
-│   ├── core-api/           # Core API microservices
-│   ├── ingestion/          # Data ingestion services
-│   ├── mindex/             # Database schemas and migrations
-│   ├── mycorrhizae/        # Event processing protocols
-│   ├── myca/               # AI/ML agent system
-│   └── dashboard/          # Web dashboard application
-├── devices/                # IoT device configurations
-├── docs/                   # Documentation
-└── scripts/                # Deployment and utility scripts
+â”œâ”€â”€ infrastructure/          # Azure Bicep/ARM templates
+â”œâ”€â”€ src/
+â”‚   â”œâ”€â”€ core-api/           # Core API microservices
+â”‚   â”œâ”€â”€ ingestion/          # Data ingestion services
+â”‚   â”œâ”€â”€ mindex/             # Database schemas and migrations
+â”‚   â”œâ”€â”€ mycorrhizae/        # Event processing protocols
+â”‚   â”œâ”€â”€ myca/               # AI/ML agent system
+â”‚   â””â”€â”€ dashboard/          # Web dashboard application
+â”œâ”€â”€ devices/                # IoT device configurations
+â”œâ”€â”€ docs/                   # Documentation
+â””â”€â”€ scripts/                # Deployment and utility scripts
 ```
 
 ## Quick Start
@@ -75,7 +75,7 @@ az login
 ## Phased Implementation
 
 - [x] **Phase 0**: Foundations (Infrastructure, DevOps)
-- [ ] **Phase 1**: FUNGA MVP (IoT → MINDEX → Dashboard)
+- [ ] **Phase 1**: FUNGA MVP (IoT â†’ MINDEX â†’ Dashboard)
 - [ ] **Phase 2**: AI & MAS (MYCA agents, ML decoders)
 - [ ] **Phase 3**: Multitenant Expansion (Partner labs, FLORA)
 - [ ] **Phase 4**: Public API & Marketplace
@@ -98,6 +98,7 @@ az login
 - [MINDEX Schema](docs/mindex.md)
 - [Mycorrhizae Protocol](docs/mycorrhizae.md)
 - [Deployment Guide](docs/deployment.md)
+- [MycoBrain Integration](docs/mycobrain-integration.md)
 
 ## Contributing
 

@@ -209,3 +209,6 @@ BenchmarkDotNet.Artifacts/
 ## Sample data (keep templates)
 samples/*.json
 !samples/sample-*.json 
+# Cursor IDE
+.cursor/
+

@@ -1,7 +1,8 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { ChartBarIcon, DevicePhoneMobileIcon, GlobeAltIcon, CubeIcon } from '@heroicons/react/24/outline';
+import MycoBrainWidget from '../components/MycoBrainWidget';
 import EventsList from '../components/EventsList';
 import StatisticsCards from '../components/StatisticsCards';
 import DeviceMap from '../components/DeviceMap';
@@ -47,7 +48,7 @@ export default function Dashboard() {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">⚠️ Error</div>
+          <div className="text-red-500 text-xl mb-4">âš ï¸ Error</div>
           <p className="text-gray-600">{error}</p>
           <button 
             onClick={fetchStatistics}
@@ -142,7 +143,10 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-
+        {/* MycoBrain */}
+        <div className=\"mt-8\">
+          <MycoBrainWidget />
+        </div>
         {/* Footer */}
         <div className="mt-12 text-center text-sm text-gray-500">
           <p>

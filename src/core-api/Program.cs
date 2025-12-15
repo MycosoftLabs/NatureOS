@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Authentication.JwtBearer;
+﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Cosmos;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -107,6 +107,7 @@ builder.Services.AddScoped<IFungaService, FungaService>();
 builder.Services.AddScoped<IMycosoftIntegrationService, MycosoftIntegrationService>();
 builder.Services.AddScoped<IExternalDataIntegrationService, ExternalDataIntegrationService>();
 builder.Services.AddScoped<IMasIngestionService, MasIngestionService>();
+builder.Services.AddScoped<IMycoBrainService, MycoBrainService>();
 // Register background services
 builder.Services.AddHostedService<ProactiveMonitoringService>();
 
