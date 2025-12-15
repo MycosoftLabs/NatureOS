@@ -108,6 +108,8 @@ builder.Services.AddScoped<IMycosoftIntegrationService, MycosoftIntegrationServi
 builder.Services.AddScoped<IExternalDataIntegrationService, ExternalDataIntegrationService>();
 builder.Services.AddScoped<IMasIngestionService, MasIngestionService>();
 builder.Services.AddScoped<IMycoBrainService, MycoBrainService>();
+builder.Services.AddScoped<IChatContextService, ChatContextService>();
+builder.Services.AddScoped<IFeedbackStore, FeedbackStore>();
 // Register background services
 builder.Services.AddHostedService<ProactiveMonitoringService>();
 
@@ -193,3 +195,4 @@ app.MapGet("/api/status", () => new
 });
 
 app.Run(); 
+

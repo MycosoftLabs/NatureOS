@@ -1,28 +1,11 @@
-import axios, { AxiosResponse } from 'axios';
+﻿import axios, { AxiosResponse } from 'axios';
 
 const NATUREOS_API_BASE = process.env.NATUREOS_API_URL || 'https://natureos-api-production.azurewebsites.net';
 
 /**
  * Live data from NatureOS Core API
  */
-export interface LiveDataResponse {
-  stats: {
-    totalEvents: number;
-    activeDevices: number;
-    speciesDetected: number;
-    onlineUsers: number;
-  };
-  liveData: {
-    readings: any[];
-    lastUpdate: string;
-  };
-  insights: {
-    trendingCompounds: string[];
-    recentDiscoveries: any[];
-  };
-}
-
-/**
+export interface LiveDataResponse {\n  Stats: {\n    TotalEvents: number;\n    ActiveDevices: number;\n    ErrorsLast24h: number;\n  };\n  LiveData: {\n    Readings: Array<{ deviceId: string; value: any; timestamp: string }>;\n    LastUpdate: string;\n  };\n  Insights: {\n    TrendingCompounds: string[];\n    RecentDiscoveries: any[];\n  };\n}\n\nexport interface WebsiteLiveDataResponse {\n  readings: Array<{ deviceId: string; value: any; ts: string }>;\n  context: any;\n}\n\n/**
  * Real-time event data structure
  */
 export interface RealtimeEvent {
@@ -60,6 +43,20 @@ export class LiveDataAPI {
     } catch (error) {
       console.error('Failed to fetch dashboard data:', error);
       throw new Error('Unable to retrieve live data');
+    }
+  }
+  /**
+   * Get website live data (readings + lightweight context)
+   */
+  async getWebsiteLiveData(): Promise<WebsiteLiveDataResponse> {
+    try {
+      const response: AxiosResponse<WebsiteLiveDataResponse> = await axios.get(
+        ${this.baseURL}/api/mycosoft/website/live-data
+      );
+      return response.data;
+    } catch (error) {
+      console.error('Failed to fetch website live data:', error);
+      throw new Error('Unable to retrieve website live data');
     }
   }
 
