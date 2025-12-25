@@ -1,5 +1,4 @@
 ﻿using Microsoft.Azure.Cosmos;
-using Ulid;
 
 namespace NatureOS.CoreApi.Services;
 
@@ -21,7 +20,7 @@ public sealed class FeedbackStore : IFeedbackStore
     public async Task AppendAsync(FeedbackEntry entry, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(entry.Id))
-            entry.Id = Ulid.NewUlid().ToString();
+            entry.Id = System.Ulid.NewUlid().ToString();
 
         try
         {

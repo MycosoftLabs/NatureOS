@@ -194,5 +194,13 @@ app.MapGet("/api/status", () => new
     }
 });
 
+// Version endpoint for platform integration
+app.MapGet("/version", () => new
+{
+    Service = "natureos",
+    Version = "2.0.0",
+    GitSha = Environment.GetEnvironmentVariable("GIT_SHA") ?? "unknown"
+});
+
 app.Run(); 
 
