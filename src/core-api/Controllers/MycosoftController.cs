@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using NatureOS.CoreApi.Services;
 using NatureOS.CoreApi.Hubs;
@@ -383,9 +383,9 @@ Please provide a helpful response that considers the current system state and da
                 Events = eventStats,
                 Integrations = new
                 {
-                    Website = "Connected",
-                    MAS = "Active",
-                    ExternalDatabases = "Syncing"
+                    Website = "Unknown",
+                    MAS = "Unknown",
+                    ExternalDatabases = "Unknown"
                 }
             };
 
@@ -412,7 +412,7 @@ Please provide a helpful response that considers the current system state and da
             EventsToday = eventStats.TodayCount,
             EventsPerHour = eventStats.AveragePerHour,
             SystemHealth = CalculateSystemHealth(deviceStats, eventStats),
-            TopSpecies = new[] { "Agaricus bisporus", "Pleurotus ostreatus", "Shiitake" },
+            TopSpecies = Array.Empty<string>(),
             AverageEventsPerDay = eventStats.AveragePerDay
         };
     }
@@ -435,19 +435,33 @@ Please provide a helpful response that considers the current system state and da
 
         suggestions.Add("What's the current system health?");
         suggestions.Add("Show me recent discoveries");
-        suggestions.Add("What are the trending compounds?");
-
         return suggestions.Take(4).ToArray();
     }
 
-    private int GetConnectedUsersCount()
+    private static int CalculateSystemHealth(DeviceStatistics deviceStats, EventStatistics eventStats)
     {
-        return Random.Shared.Next(15, 45);
-    }
+        var healthContributions = new List<double>();
 
-    private int CalculateSystemHealth(object deviceStats, object eventStats)
-    {
-        return Random.Shared.Next(85, 98);
+        if (deviceStats.TotalDevices > 0)
+        {
+            deviceStats.DevicesByStatus.TryGetValue(DeviceStatus.Online, out var online);
+            healthContributions.Add((double)online / deviceStats.TotalDevices);
+        }
+
+        if (eventStats.TotalEvents > 0)
+        {
+            var errorEvents = eventStats.EventsByDomain
+                .Where(kvp => kvp.Key.Contains("error", StringComparison.OrdinalIgnoreCase))
+                .Sum(kvp => kvp.Value);
+            var errorRate = (double)errorEvents / eventStats.TotalEvents;
+            healthContributions.Add(1.0 - Math.Clamp(errorRate, 0.0, 1.0));
+        }
+
+        if (healthContributions.Count == 0)
+            return 0;
+
+        var health = healthContributions.Average() * 100.0;
+        return (int)Math.Round(Math.Clamp(health, 0.0, 100.0));
     }
 
     // Canonical website/dashboard response object
@@ -484,7 +498,7 @@ Please provide a helpful response that considers the current system state and da
             },
             Insights = new WebsiteDashboardInsights
             {
-                TrendingCompounds = new[] { "Psilocybin", "Cordycepin", "Ergosterol" },
+                TrendingCompounds = Array.Empty<string>(),
                 RecentDiscoveries = recentEvents.Items.Where(e => e.KingdomDomain.Contains("discovery", StringComparison.OrdinalIgnoreCase)).Take(3).Cast<object>().ToArray()
             }
         };

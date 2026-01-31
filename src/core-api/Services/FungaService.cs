@@ -299,79 +299,56 @@ public class FungaService : IFungaService
 
     private static MorphologicalFeatures ExtractMorphologicalFeatures(object signalVector)
     {
-        // Extract morphological features from signal data
-        // This would be implemented with actual ML/CV algorithms
         return new MorphologicalFeatures
         {
-            CapDiameter = 25.0,
-            StemHeight = 40.0,
-            SporeSize = 8.5,
-            Color = "brown",
-            Texture = "smooth"
+            CapDiameter = null,
+            StemHeight = null,
+            SporeSize = null,
+            Color = null,
+            Texture = null
         };
     }
 
     private async Task<TaxonomicClassification> PerformTaxonomicClassification(MorphologicalFeatures features)
     {
-        // This would call an ML model for taxonomic classification
-        // For now, return a placeholder classification
-        return new TaxonomicClassification
-        {
-            Kingdom = "Fungi",
-            Phylum = "Basidiomycota",
-            Class = "Agaricomycetes",
-            Order = "Agaricales",
-            Family = "Agaricaceae",
-            Genus = "Agaricus",
-            Species = "bisporus",
-            ScientificName = "Agaricus bisporus"
-        };
+        await Task.CompletedTask;
+        return new TaxonomicClassification();
     }
 
     private async Task<List<AlternativeClassification>> GetAlternativeClassifications(MorphologicalFeatures features)
     {
-        // Return alternative classifications with confidence scores
-        return new List<AlternativeClassification>
-        {
-            new AlternativeClassification
-            {
-                Taxonomy = new TaxonomicClassification
-                {
-                    Kingdom = "Fungi",
-                    Phylum = "Basidiomycota",
-                    Class = "Agaricomycetes",
-                    Order = "Agaricales",
-                    Family = "Agaricaceae",
-                    Genus = "Agaricus",
-                    Species = "campestris",
-                    ScientificName = "Agaricus campestris"
-                },
-                Confidence = 0.25
-            }
-        };
+        await Task.CompletedTask;
+        return new List<AlternativeClassification>();
     }
 
     private async Task<EcologicalIndicators> AnalyzeEcologicalIndicators(MorphologicalFeatures features)
     {
+        await Task.CompletedTask;
         return new EcologicalIndicators
         {
-            MycorrhizalType = "arbuscular",
-            HostSpecies = new List<string> { "Quercus alba", "Pinus strobus" },
-            SoilHealth = new Dictionary<string, double>
-            {
-                ["nitrogen"] = 0.8,
-                ["phosphorus"] = 0.6,
-                ["ph"] = 6.5,
-                ["organic_matter"] = 0.85
-            },
-            EcosystemRole = "decomposer"
+            MycorrhizalType = null,
+            HostSpecies = null,
+            SoilHealth = null,
+            EcosystemRole = null
         };
     }
 
     private static double CalculateConfidence(MorphologicalFeatures features, TaxonomicClassification taxonomy)
     {
-        // Calculate confidence based on feature quality and taxonomic certainty
-        return 0.85;
+        if (taxonomy == null || string.IsNullOrWhiteSpace(taxonomy.ScientificName))
+            return 0.0;
+
+        var featureSignals = 0;
+        if (features.CapDiameter.HasValue) featureSignals++;
+        if (features.StemHeight.HasValue) featureSignals++;
+        if (features.SporeSize.HasValue) featureSignals++;
+        if (!string.IsNullOrWhiteSpace(features.Color)) featureSignals++;
+        if (!string.IsNullOrWhiteSpace(features.Texture)) featureSignals++;
+
+        if (featureSignals == 0)
+            return 0.0;
+
+        return Math.Clamp(featureSignals / 5.0, 0.0, 1.0);
     }
 
     private static List<NetworkEdge> BuildNetworkEdges(List<MycorrhizaeEvent> events, List<NetworkNode> nodes)

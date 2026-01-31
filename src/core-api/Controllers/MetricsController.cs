@@ -7,17 +7,14 @@ namespace NatureOS.CoreApi.Controllers;
 [Route("api/mycosoft/metrics")]
 public class MetricsController : ControllerBase
 {
-    // Minimal placeholder; in production, enforce RBAC for executive roles
     [HttpGet]
     [Authorize(Roles = "Executive,Admin")] 
     public IActionResult GetMetrics()
     {
-        var now = DateTime.UtcNow;
-        return Ok(new {
-            timestamp = now,
-            finance = new { burnRate = 0.65, runwayMonths = 14 },
-            hr = new { teamSize = 7, openRoles = 2 },
-            product = new { activeUsers = 1234, dailyIngestion = 2300 }
+        return StatusCode(501, new
+        {
+            error = "metrics_unavailable",
+            message = "Executive metrics require real data sources and are not configured."
         });
     }
 }

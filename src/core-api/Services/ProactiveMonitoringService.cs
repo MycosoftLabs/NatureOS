@@ -1,7 +1,10 @@
+using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using NatureOS.CoreApi.Hubs;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace NatureOS.CoreApi.Services;
 
@@ -13,17 +16,22 @@ public class ProactiveMonitoringService : BackgroundService
     private readonly IServiceProvider _serviceProvider;
     private readonly IHubContext<NatureOSHub> _hubContext;
     private readonly ILogger<ProactiveMonitoringService> _logger;
+    private readonly IConfiguration _configuration;
     private readonly PerformanceCounter? _cpuCounter;
     private readonly PerformanceCounter? _memoryCounter;
+    private long? _lastCpuTotal;
+    private long? _lastCpuIdle;
 
     public ProactiveMonitoringService(
         IServiceProvider serviceProvider,
         IHubContext<NatureOSHub> hubContext,
-        ILogger<ProactiveMonitoringService> logger)
+        ILogger<ProactiveMonitoringService> logger,
+        IConfiguration configuration)
     {
         _serviceProvider = serviceProvider;
         _hubContext = hubContext;
         _logger = logger;
+        _configuration = configuration;
 
         try
         {
@@ -87,7 +95,7 @@ public class ProactiveMonitoringService : BackgroundService
             var systemMetrics = await GatherSystemMetrics();
             
             // Check CPU usage
-            if (systemMetrics.CpuUsage > 80)
+            if (systemMetrics.CpuUsage.HasValue && systemMetrics.CpuUsage > 80)
             {
                 await SendAlert(new SystemAlert
                 {
@@ -106,7 +114,7 @@ public class ProactiveMonitoringService : BackgroundService
             }
 
             // Check memory usage
-            if (systemMetrics.MemoryUsage > 85)
+            if (systemMetrics.MemoryUsage.HasValue && systemMetrics.MemoryUsage > 85)
             {
                 await SendAlert(new SystemAlert
                 {
@@ -125,7 +133,7 @@ public class ProactiveMonitoringService : BackgroundService
             }
 
             // Check disk space
-            if (systemMetrics.DiskUsage > 90)
+            if (systemMetrics.DiskUsage.HasValue && systemMetrics.DiskUsage > 90)
             {
                 await SendAlert(new SystemAlert
                 {
@@ -220,7 +228,15 @@ public class ProactiveMonitoringService : BackgroundService
             });
 
             var eventCount = recentEvents.Items.Count();
-            var averageEventsPerHour = 100; // This would be calculated from historical data
+            var stats = await eventService.GetEventStatisticsAsync(new EventQuery
+            {
+                StartDate = DateTime.UtcNow.AddHours(-24),
+                EndTime = DateTime.UtcNow
+            });
+            var averageEventsPerHour = stats.AveragePerHour;
+
+            if (averageEventsPerHour <= 0)
+                return;
 
             // Check for unusual data patterns
             if (eventCount < averageEventsPerHour * 0.5) // Less than 50% of normal
@@ -230,7 +246,7 @@ public class ProactiveMonitoringService : BackgroundService
                     Type = "DataQuality",
                     Category = "Volume",
                     Severity = "Warning",
-                    Message = $"Unusually low data volume: {eventCount} events in last hour (expected ~{averageEventsPerHour})",
+                    Message = $"Unusually low data volume: {eventCount} events in last hour (baseline {averageEventsPerHour:F1}/hour)",
                     Timestamp = DateTime.UtcNow,
                     Recommendations = new[]
                     {
@@ -247,7 +263,7 @@ public class ProactiveMonitoringService : BackgroundService
                     Type = "DataQuality",
                     Category = "Volume",
                     Severity = "Info",
-                    Message = $"Unusually high data volume: {eventCount} events in last hour (expected ~{averageEventsPerHour})",
+                    Message = $"Unusually high data volume: {eventCount} events in last hour (baseline {averageEventsPerHour:F1}/hour)",
                     Timestamp = DateTime.UtcNow,
                     Recommendations = new[]
                     {
@@ -391,40 +407,9 @@ public class ProactiveMonitoringService : BackgroundService
 
         try
         {
-            // Get CPU usage
-            if (_cpuCounter != null)
-            {
-                metrics.CpuUsage = _cpuCounter.NextValue();
-            }
-            else
-            {
-                // Fallback for non-Windows systems or when counters are unavailable
-                metrics.CpuUsage = Random.Shared.Next(10, 60); // Simulated
-            }
-
-            // Get memory usage
-            if (_memoryCounter != null)
-            {
-                var availableMemoryMB = _memoryCounter.NextValue();
-                var totalMemoryMB = 8192; // This would be detected from the system
-                metrics.MemoryUsage = ((totalMemoryMB - availableMemoryMB) / totalMemoryMB) * 100;
-            }
-            else
-            {
-                metrics.MemoryUsage = Random.Shared.Next(30, 70); // Simulated
-            }
-
-            // Get disk usage
-            var drives = DriveInfo.GetDrives().Where(d => d.IsReady);
-            if (drives.Any())
-            {
-                var primaryDrive = drives.First();
-                metrics.DiskUsage = ((double)(primaryDrive.TotalSize - primaryDrive.AvailableFreeSpace) / primaryDrive.TotalSize) * 100;
-            }
-            else
-            {
-                metrics.DiskUsage = Random.Shared.Next(20, 50); // Simulated
-            }
+            metrics.CpuUsage = TryGetCpuUsage();
+            metrics.MemoryUsage = TryGetMemoryUsage();
+            metrics.DiskUsage = TryGetDiskUsage();
         }
         catch (Exception ex)
         {
@@ -434,6 +419,157 @@ public class ProactiveMonitoringService : BackgroundService
         return metrics;
     }
 
+    private double? TryGetCpuUsage()
+    {
+        if (_cpuCounter != null)
+        {
+            var value = _cpuCounter.NextValue();
+            return value >= 0 ? value : null;
+        }
+
+        if (OperatingSystem.IsLinux())
+            return TryGetLinuxCpuUsage();
+
+        return null;
+    }
+
+    private double? TryGetLinuxCpuUsage()
+    {
+        try
+        {
+            if (!File.Exists("/proc/stat"))
+                return null;
+
+            var line = File.ReadLines("/proc/stat").FirstOrDefault(l => l.StartsWith("cpu "));
+            if (line == null)
+                return null;
+
+            var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length < 5)
+                return null;
+
+            long ReadAt(int index) => long.Parse(parts[index], CultureInfo.InvariantCulture);
+
+            var user = ReadAt(1);
+            var nice = ReadAt(2);
+            var system = ReadAt(3);
+            var idle = ReadAt(4);
+            var iowait = parts.Length > 5 ? ReadAt(5) : 0;
+            var irq = parts.Length > 6 ? ReadAt(6) : 0;
+            var softirq = parts.Length > 7 ? ReadAt(7) : 0;
+            var steal = parts.Length > 8 ? ReadAt(8) : 0;
+
+            var total = user + nice + system + idle + iowait + irq + softirq + steal;
+            var idleAll = idle + iowait;
+
+            if (_lastCpuTotal.HasValue && _lastCpuIdle.HasValue)
+            {
+                var totalDelta = total - _lastCpuTotal.Value;
+                var idleDelta = idleAll - _lastCpuIdle.Value;
+                if (totalDelta > 0)
+                {
+                    return (double)(totalDelta - idleDelta) / totalDelta * 100.0;
+                }
+            }
+
+            _lastCpuTotal = total;
+            _lastCpuIdle = idleAll;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read /proc/stat for CPU usage");
+        }
+
+        return null;
+    }
+
+    private double? TryGetMemoryUsage()
+    {
+        if (_memoryCounter != null)
+        {
+            var availableMemoryMB = _memoryCounter.NextValue();
+            var totalAvailableBytes = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+            if (totalAvailableBytes > 0)
+            {
+                var totalMemoryMB = totalAvailableBytes / (1024.0 * 1024.0);
+                var usedPercent = ((totalMemoryMB - availableMemoryMB) / totalMemoryMB) * 100.0;
+                return Math.Clamp(usedPercent, 0.0, 100.0);
+            }
+        }
+
+        if (OperatingSystem.IsLinux())
+            return TryGetLinuxMemoryUsage();
+
+        return null;
+    }
+
+    private double? TryGetLinuxMemoryUsage()
+    {
+        try
+        {
+            if (!File.Exists("/proc/meminfo"))
+                return null;
+
+            long? totalKb = null;
+            long? availableKb = null;
+
+            foreach (var line in File.ReadLines("/proc/meminfo"))
+            {
+                if (line.StartsWith("MemTotal:", StringComparison.OrdinalIgnoreCase))
+                    totalKb = ParseMemInfoValue(line);
+                if (line.StartsWith("MemAvailable:", StringComparison.OrdinalIgnoreCase))
+                    availableKb = ParseMemInfoValue(line);
+
+                if (totalKb.HasValue && availableKb.HasValue)
+                    break;
+            }
+
+            if (!totalKb.HasValue || !availableKb.HasValue || totalKb.Value <= 0)
+                return null;
+
+            var usedPercent = (double)(totalKb.Value - availableKb.Value) / totalKb.Value * 100.0;
+            return Math.Clamp(usedPercent, 0.0, 100.0);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read /proc/meminfo for memory usage");
+            return null;
+        }
+    }
+
+    private static long? ParseMemInfoValue(string line)
+    {
+        var parts = line.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length < 2)
+            return null;
+
+        if (long.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out var value))
+            return value;
+
+        return null;
+    }
+
+    private double? TryGetDiskUsage()
+    {
+        try
+        {
+            var root = Path.GetPathRoot(AppContext.BaseDirectory);
+            if (string.IsNullOrWhiteSpace(root))
+                return null;
+
+            var drive = new DriveInfo(root);
+            if (!drive.IsReady || drive.TotalSize <= 0)
+                return null;
+
+            return (double)(drive.TotalSize - drive.AvailableFreeSpace) / drive.TotalSize * 100.0;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to read disk usage");
+            return null;
+        }
+    }
+
     private async Task<bool> TestCosmosDbConnectivity()
     {
         try
@@ -441,7 +577,7 @@ public class ProactiveMonitoringService : BackgroundService
             using var scope = _serviceProvider.CreateScope();
             var cosmosClient = scope.ServiceProvider.GetRequiredService<Microsoft.Azure.Cosmos.CosmosClient>();
             
-            var database = cosmosClient.GetDatabase("MINDEX");
+            var database = cosmosClient.GetDatabase("mindex");
             await database.ReadAsync();
             return true;
         }
@@ -451,18 +587,30 @@ public class ProactiveMonitoringService : BackgroundService
         }
     }
 
-    private async Task<bool> TestEventGridConnectivity()
+    private Task<bool> TestEventGridConnectivity()
     {
-        // This would test Event Grid connectivity
-        await Task.Delay(100); // Simulate test
-        return Random.Shared.Next(0, 10) != 0; // 90% success rate
+        var endpoint = _configuration["EventGrid:TopicEndpoint"];
+        var key = _configuration["EventGrid:AccessKey"];
+        var hasConfig = !string.IsNullOrWhiteSpace(endpoint) && !string.IsNullOrWhiteSpace(key);
+        var validUri = hasConfig && Uri.TryCreate(endpoint, UriKind.Absolute, out _);
+        return Task.FromResult(hasConfig && validUri);
     }
 
     private async Task<bool> TestServiceBusConnectivity()
     {
-        // This would test Service Bus connectivity
-        await Task.Delay(100); // Simulate test
-        return Random.Shared.Next(0, 20) != 0; // 95% success rate
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var client = scope.ServiceProvider.GetRequiredService<ServiceBusClient>();
+            var receiver = client.CreateReceiver("mycorrhizae-events");
+            await receiver.PeekMessageAsync(TimeSpan.FromSeconds(2));
+            await receiver.CloseAsync();
+            return true;
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     private async Task SendAlert(SystemAlert alert)
@@ -499,9 +647,9 @@ public class ProactiveMonitoringService : BackgroundService
 public class SystemMetrics
 {
     public DateTime Timestamp { get; set; }
-    public double CpuUsage { get; set; }
-    public double MemoryUsage { get; set; }
-    public double DiskUsage { get; set; }
+    public double? CpuUsage { get; set; }
+    public double? MemoryUsage { get; set; }
+    public double? DiskUsage { get; set; }
 }
 
 public class SystemAlert
