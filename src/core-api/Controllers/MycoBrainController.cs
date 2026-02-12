@@ -1,6 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc;
 using NatureOS.CoreApi.Services;
 using NatureOS.MINDEX.Models;
+using System.Text.Json;
 
 namespace NatureOS.CoreApi.Controllers;
 
@@ -35,6 +36,13 @@ public class MycoBrainController : ControllerBase
     public async Task<IActionResult> TelemetryMdp([FromBody] byte[] frame, CancellationToken ct)
     {
         var result = await _service.ProcessMDPFrameAsync(frame, ct);
+        return Ok(result);
+    }
+
+    [HttpPost("telemetry/envelope")]
+    public async Task<IActionResult> TelemetryEnvelope([FromBody] JsonElement envelope, CancellationToken ct)
+    {
+        var result = await _service.ProcessEnvelopeAsync(envelope, ct);
         return Ok(result);
     }
 

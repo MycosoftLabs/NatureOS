@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Virtual Mycelium Simulator with Console and Recording</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    /* Styles for the simulator */
+/* test */
+
+    body {
+      margin: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      flex-direction: row;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 20px;
+      flex-wrap: wrap;
+    }
+    .sim-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Centers the canvas and console */
+}
+    #petriDish {
+      border: 2px solid rgba(255, 255, 255, 0.5);
+      background-color: rgba(255, 255, 255, 0.1);
+      max-width: 100%;
+      height: auto;
+    }
+
+    .side-panel {
+      margin-left: 20px;
+      width: 220px;
+      flex-shrink: 0;
+    }
+
+    .side-panel h2 {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+      padding-bottom: 5px;
+    }
+
+    .side-panel select,
+    .side-panel button,
+    .side-panel input[type="range"] {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 5px;
+      background-color: #444;
+      border: none;
+      color: #fff;
+      border-radius: 4px;
+    }
+
+    .side-panel button {
+      cursor: pointer;
+    }
+
+    .side-panel button:hover,
+    .side-panel select:hover {
+      background-color: #555;
+    }
+
+    #resetButton {
+      background-color: rgba(255, 0, 0, 0.5);
+    }
+
+    #resetButton:hover {
+      background-color: rgba(255, 0, 0, 0.7);
+    }
+
+    /* Cursor styles based on the selected tool */
+    #petriDish.cursor-swab {
+      cursor: crosshair;
+    }
+
+    #petriDish.cursor-scalpel {
+      cursor: alias;
+    }
+
+    #petriDish.cursor-contamination {
+      cursor: url('data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAQAAAC1+jfqAAAAO0lEQVR4AWMYBUwAYoAUsABiB4QG+YDQgVkJwTD0/98yEgsHnABASIzJrBEYYkYIbNAiYGABZ1gE0qp3haAAAAAElFTkSuQmCC'), auto;
+    }
+
+    /* Virtual hour display style */
+    #hourDisplay {
+      margin-top: 20px;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    /* Slider labels */
+    .slider-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 15px;
+      font-size: 14px;
+    }
+
+    /* Console for live data display */
+    #console {
+      width: 100%;
+      max-height: 200px;
+      background-color: #111;
+      color: #0f0;
+      font-family: monospace;
+      overflow-y: auto;
+      border-top: 2px solid #333;
+      padding: 10px;
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+        align-items: center;
+      }
+
+      .side-panel {
+        margin-left: 0;
+        width: 90%;
+        max-width: 400px;
+      }
+
+      #petriDish {
+        width: 90%;
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sim-container" style="display: flex; flex-direction: column; align-items: center;">
+          <canvas id="petriDish" width="750" height="750"></canvas>
+          <div id="console" style="width: 750px; height: 500px; overflow-y: auto; background-color: #333; color: #fff; padding: 10px; margin-top: 10px;">
+            <!-- Console output will appear here -->
+          </div>
+        </div>
+    <div class="side-panel">
+      <h2>Mushrooms</h2>
+      <select id="speciesSelect">
+        <option value="shiitake">Shiitake</option>
+        <option value="oyster">Oyster</option>
+        <option value="pinkOyster">Pink Oyster Mushroom</option>
+        <option value="enoki">Enoki</option>
+        <option value="cordyceps">Cordyceps</option>
+        <option value="lionsMane">Lion's Mane</option>
+        <option value="buttonMushroom">Button Mushroom</option>
+        <option value="cremini">Cremini Mushroom</option>
+        <option value="portobello">Portobello Mushroom</option>
+        <option value="maitake">Maitake Mushroom</option>
+        <option value="blackTrumpet">Black Trumpet Mushroom</option>
+        <option value="morel">Morel Mushroom</option>
+      </select>
+
+      <h2>Tools</h2>
+      <button id="sporeSwab">Spore Swab</button>
+      <button id="scalpel">Scalpel</button>
+      <button id="contaminationTool">Contamination</button>
+
+      <h2>Contaminant Type</h2>
+      <select id="contaminantSelect">
+        <option value="mold">Mold</option>
+        <option value="mildew">Mildew</option>
+        <option value="bacteria">Bacteria</option>
+        <option value="virus">Virus</option>
+      </select>
+
+      <h2>Agar Type</h2>
+      <select id="agarSelect">
+        <option value="charcoal">Charcoal Agar</option>
+        <option value="blood">Blood Agar</option>
+        <option value="dextrose">Dextrose Pine Wood Agar</option>
+        <option value="feces">Feces Agar</option>
+        <option value="maltExtract">Malt Extract Agar (MEA)</option>
+        <option value="fungalAgar">Fungal Agar (Mycological Agar)</option>
+        <option value="sabouraud">Sabouraud Dextrose Agar</option>
+      </select>
+
+      <h2>Time-lapse Speed</h2>
+      <input type="range" id="speedRange" min="1" max="10" value="5">
+      <label for="speedRange" class="slider-label">Speed: <span id="speedValue">5</span>x</label>
+
+      <h2>pH Level</h2>
+      <input type="range" id="pHRange" min="4" max="10" step="0.1" value="6.0">
+      <label for="pHRange" class="slider-label">pH: <span id="pHValue">6.0</span></label>
+
+      <h2>Temperature (°F)</h2>
+      <input type="range" id="tempRange" min="50" max="120" value="70">
+      <label for="tempRange" class="slider-label">Temperature: <span id="tempValue">70</span>°F</label>
+
+      <h2>Humidity (%)</h2>
+      <input type="range" id="humidityRange" min="40" max="100" value="70">
+      <label for="humidityRange" class="slider-label">Humidity: <span id="humidityValue">70</span>%</label>
+
+      <button id="resetButton">Reset Simulation</button>
+      <button id="saveButton">Save Simulation</button> <!-- New Save Button -->
+      <button id="toggleRecordButton" style="background-color: grey;">Start Recording</button>
+
+
+      <div id="hourDisplay">Virtual Hours: 0</div>
+    </div>
+  </div>
+
+  <div id="console"></div>
+
+  <script>
+    // Console log functionality
+function logToConsole(message) {
+  const consoleDiv = document.getElementById('console');
+  const logEntry = document.createElement('div');
+  logEntry.textContent = message;
+  consoleDiv.appendChild(logEntry);
+  consoleDiv.scrollTop = consoleDiv.scrollHeight; // Auto scroll to the bottom
+}
+
+    // Initialize canvas and context
+    const canvas = document.getElementById('petriDish');
+    const ctx = canvas.getContext('2d');
+    const width = canvas.width;
+    const height = canvas.height;
+    const dishRadius = 375;
+
+// Function to set the canvas background color and draw the petri dish perimeter
+function setCanvasBackgroundAndDrawDish() {
+  // Set the background color to match the desired style
+  ctx.fillStyle = '#1a1a1a'; // Dark grey to match the simulator dark mode
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  
+  // Draw the petri dish perimeter
+  ctx.beginPath();
+  ctx.arc(canvas.width / 2, canvas.height / 2, dishRadius, 0, 2 * Math.PI);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)'; // Slightly transparent fill for dish
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; // White perimeter for dish boundary
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+function drawPetriDishBackground() {
+  // Draw the petri dish background and border
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.05)'; // Adjust as necessary for a subtle background fill
+  ctx.beginPath();
+  ctx.arc(canvas.width / 2, canvas.height / 2, dishRadius, 0, 2 * Math.PI);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)'; // Adjust the border style as needed
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+
+    // Call once at the start
+    setCanvasBackgroundAndDrawDish();
+
+    // Variables for user selections
+    let selectedTool = 'sporeSwab';
+    let selectedSpecies = document.getElementById('speciesSelect').value;
+    let selectedContaminant = document.getElementById('contaminantSelect').value;
+    let agarType = document.getElementById('agarSelect').value;
+
+    // Simulation running flag
+    let simulationRunning = false;
+
+    // Initialize environmental variables
+    let speed = Number(document.getElementById('speedRange').value);
+    let pH = Number(document.getElementById('pHRange').value);
+    let temperature = Number(document.getElementById('tempRange').value);
+    let humidity = Number(document.getElementById('humidityRange').value);
+
+    // Display initial values
+    document.getElementById('speedValue').textContent = speed;
+    document.getElementById('pHValue').textContent = pH.toFixed(1);
+    document.getElementById('tempValue').textContent = temperature;
+    document.getElementById('humidityValue').textContent = humidity;
+
+    // Function to update the cursor based on the selected tool
+    function updateCursor() {
+      canvas.classList.remove('cursor-swab', 'cursor-scalpel', 'cursor-contamination');
+      if (selectedTool === 'sporeSwab') {
+        canvas.classList.add('cursor-swab');
+      } else if (selectedTool === 'scalpel') {
+        canvas.classList.add('cursor-scalpel');
+      } else if (selectedTool === 'contamination') {
+        canvas.classList.add('cursor-contamination');
+      } else {
+        canvas.style.cursor = 'default';
+      }
+    }
+
+    // Initialize cursor
+    updateCursor();
+
+    // Event listeners for tool buttons
+    document.getElementById('sporeSwab').addEventListener('click', () => {
+      selectedTool = 'sporeSwab';
+      updateCursor();
+    });
+
+    document.getElementById('scalpel').addEventListener('click', () => {
+      selectedTool = 'scalpel';
+      updateCursor();
+    });
+
+    document.getElementById('contaminationTool').addEventListener('click', () => {
+      selectedTool = 'contamination';
+      updateCursor();
+    });
+
+    // Event listeners for selections and sliders
+    document.getElementById('speciesSelect').addEventListener('change', (e) => {
+      selectedSpecies = e.target.value;
+    });
+
+    document.getElementById('contaminantSelect').addEventListener('change', (e) => {
+      selectedContaminant = e.target.value;
+    });
+
+    document.getElementById('agarSelect').addEventListener('change', (e) => {
+      agarType = e.target.value;
+      initializeNutrientGrid();
+    });
+
+    document.getElementById('speedRange').addEventListener('input', (e) => {
+  speed = Number(e.target.value);
+  document.getElementById('speedValue').textContent = speed;
+
+  // Update the simulation speed without restarting
+  if (simulationRunning) {
+    clearInterval(simulationInterval);
+    simulationInterval = setInterval(simulate, 1000 / (speed * 2)); // Adjust the interval for new speed
+  }
+});
+
+
+    document.getElementById('pHRange').addEventListener('input', (e) => {
+      pH = Number(e.target.value);
+      document.getElementById('pHValue').textContent = pH.toFixed(1);
+    });
+
+    document.getElementById('tempRange').addEventListener('input', (e) => {
+      temperature = Number(e.target.value);
+      document.getElementById('tempValue').textContent = temperature;
+    });
+
+    document.getElementById('humidityRange').addEventListener('input', (e) => {
+      humidity = Number(e.target.value);
+      document.getElementById('humidityValue').textContent = humidity;
+    });
+    // User interaction with the canvas
+    let isDrawing = false;
+
+    canvas.addEventListener('mousedown', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if (isInsidePetriDish(x, y)) {
+        isDrawing = true;
+        if (selectedTool === 'sporeSwab') {
+          placeSample(x, y);
+        } else if (selectedTool === 'scalpel') {
+          placeRandomTissue(x, y);
+        } else if (selectedTool === 'contamination') {
+          placeContaminant(x, y);
+        }
+      }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (isDrawing && (selectedTool === 'sporeSwab' || selectedTool === 'contamination')) {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        if (isInsidePetriDish(x, y)) {
+          if (selectedTool === 'sporeSwab') {
+            placeSample(x, y);
+          } else if (selectedTool === 'contamination') {
+            placeContaminant(x, y);
+          }
+        }
+      }
+    });
+
+    canvas.addEventListener('mouseup', () => {
+      isDrawing = false;
+    });
+
+    canvas.addEventListener('mouseleave', () => {
+      isDrawing = false;
+    });
+
+    // Function to check if a point is inside the petri dish
+    function isInsidePetriDish(x, y) {
+      const dx = x - width / 2;
+      const dy = y - height / 2;
+      return Math.sqrt(dx * dx + dy * dy) <= dishRadius;
+    }
+
+    // Initialize grids
+    let nutrientGrid = [];
+    let occupancyGrid = [];
+    let antifungalGrid = []; // For antifungal responses
+
+    function initializeNutrientGrid() {
+      nutrientGrid = [];
+      occupancyGrid = [];
+      antifungalGrid = [];
+      const nutrientLevel = getAgarNutrientLevel(agarType);
+      for (let x = 0; x < width; x++) {
+        nutrientGrid[x] = [];
+        occupancyGrid[x] = [];
+        antifungalGrid[x] = [];
+        for (let y = 0; y < height; y++) {
+          nutrientGrid[x][y] = nutrientLevel;
+          occupancyGrid[x][y] = null;
+          antifungalGrid[x][y] = 0;
+        }
+      }
+    }
+
+    initializeNutrientGrid();
+
+    // Get initial nutrient level based on agar type
+    function getAgarNutrientLevel(agar) {
+      const nutrientLevels = {
+        charcoal: 80,
+        blood: 120,
+        dextrose: 100,
+        feces: 60,
+        maltExtract: 110,
+        fungalAgar: 100,
+        sabouraud: 90,
+      };
+      return nutrientLevels[agar] || 80;
+    }
+
+    // Arrays to hold samples and contaminants
+    let samples = [];
+    let contaminants = [];
+
+    // Species properties
+    const speciesProperties = {
+      shiitake: {
+        growthRate: 1.0,
+        filamentThickness: 0.5,
+        branchingProbability: 0.05,
+        color: '#A0522D', // Sienna
+        edgeColor: '#FF6347', // Tomato
+        preferredAgar: 'charcoal',
+        mergeProbability: 0.2,
+        isContaminant: false,
+        antifungalStrength: 2,
+      },
+      oyster: {
+        growthRate: 1.2,
+        filamentThickness: 0.7,
+        branchingProbability: 0.07,
+        color: '#87CEFA', // LightSkyBlue
+        edgeColor: '#1E90FF', // DodgerBlue
+        preferredAgar: 'dextrose',
+        mergeProbability: 0.4,
+        isContaminant: false,
+        antifungalStrength: 1,
+      },
+      pinkOyster: {
+        growthRate: 1.3,
+        filamentThickness: 0.6,
+        branchingProbability: 0.08,
+        color: '#FFC0CB', // Pink
+        edgeColor: '#FF69B4', // HotPink
+        preferredAgar: 'dextrose',
+        mergeProbability: 0.4,
+        isContaminant: false,
+        antifungalStrength: 1,
+      },
+      enoki: {
+        growthRate: 0.9,
+        filamentThickness: 0.4,
+        branchingProbability: 0.04,
+        color: '#FFFACD', // LemonChiffon
+        edgeColor: '#FFD700', // Gold
+        preferredAgar: 'blood',
+        mergeProbability: 0.3,
+        isContaminant: false,
+        antifungalStrength: 1,
+      },
+      cordyceps: {
+        growthRate: 0.8,
+        filamentThickness: 0.3,
+        branchingProbability: 0.03,
+        color: '#FF8C00', // DarkOrange
+        edgeColor: '#FF4500', // OrangeRed
+        preferredAgar: 'feces',
+        mergeProbability: 0.1,
+        isContaminant: false,
+        antifungalStrength: 2,
+      },
+      lionsMane: {
+        growthRate: 1.1,
+        filamentThickness: 0.6,
+        branchingProbability: 0.06,
+        color: '#FFFFFF', // White
+        edgeColor: '#F0E68C', // Khaki
+        preferredAgar: 'blood',
+        mergeProbability: 0.35,
+        isContaminant: false,
+        antifungalStrength: 1,
+      },
+      buttonMushroom: {
+        growthRate: 1.0,
+        filamentThickness: 0.5,
+        branchingProbability: 0.05,
+        color: '#F5F5DC', // Beige
+        edgeColor: '#DEB887', // BurlyWood
+        preferredAgar: 'maltExtract',
+        mergeProbability: 0.3,
+        isContaminant: false,
+        antifungalStrength: 1,
+      },
+      cremini: {
+        growthRate: 1.0,
+        filamentThickness: 0.5,
+        branchingProbability: 0.05,
+        color: '#CD853F', // Peru
+        edgeColor: '#D2691E', // Chocolate
+        preferredAgar: 'maltExtract',
+        mergeProbability: 0.3,
+        isContaminant: false,
+        antifungalStrength: 1,
+      },
+      portobello: {
+        growthRate: 0.9,
+        filamentThickness: 0.6,
+        branchingProbability: 0.04,
+        color: '#8B4513', // SaddleBrown
+        edgeColor: '#A0522D', // Sienna
+        preferredAgar: 'maltExtract',
+        mergeProbability: 0.25,
+        isContaminant: false,
+        antifungalStrength: 1,
+      },
+      maitake: {
+        growthRate: 1.1,
+        filamentThickness: 0.6,
+        branchingProbability: 0.06,
+        color: '#708090', // SlateGray
+        edgeColor: '#2F4F4F', // DarkSlateGray
+        preferredAgar: 'fungalAgar',
+        mergeProbability: 0.35,
+        isContaminant: false,
+        antifungalStrength: 2,
+      },
+      blackTrumpet: {
+        growthRate: 0.8,
+        filamentThickness: 0.4,
+        branchingProbability: 0.03,
+        color: '#000000', // Black
+        edgeColor: '#696969', // DimGray
+        preferredAgar: 'fungalAgar',
+        mergeProbability: 0.2,
+        isContaminant: false,
+        antifungalStrength: 2,
+      },
+      morel: {
+        growthRate: 1.2,
+        filamentThickness: 0.5,
+        branchingProbability: 0.07,
+        color: '#D2B48C', // Tan
+        edgeColor: '#BC8F8F', // RosyBrown
+        preferredAgar: 'sabouraud',
+        mergeProbability: 0.4,
+        isContaminant: false,
+        antifungalStrength: 2,
+      },
+
+      // Contaminant properties
+      mold: {
+        growthRate: 1.5,
+        filamentThickness: 0.4,
+        branchingProbability: 0.1,
+        color: '#00FF00', // Bright Green
+        edgeColor: '#008000', // Dark Green
+        preferredAgar: 'any',
+        mergeProbability: 0.5,
+        isContaminant: true,
+      },
+      mildew: {
+        growthRate: 1.2,
+        filamentThickness: 0.3,
+        branchingProbability: 0.08,
+        color: '#CCCCCC', // Light Gray
+        edgeColor: '#888888', // Gray
+        preferredAgar: 'any',
+        mergeProbability: 0.5,
+        isContaminant: true,
+      },
+      bacteria: {
+        growthRate: 2.0,
+        filamentThickness: 0.2,
+        branchingProbability: 0.2,
+        color: '#FFFF00', // Yellow
+        edgeColor: '#FFD700', // Gold
+        preferredAgar: 'blood',
+        mergeProbability: 0.6,
+        isContaminant: true,
+      },
+      virus: {
+        growthRate: 0.5,
+        filamentThickness: 0.1,
+        branchingProbability: 0.05,
+        color: '#FF00FF', // Magenta
+        edgeColor: '#8B008B', // Dark Magenta
+        preferredAgar: 'any',
+        mergeProbability: 0.8,
+        isContaminant: true,
+      },
+    };
+
+    // Function to place a sample on the dish
+    function placeSample(x, y) {
+      if (!simulationRunning) {
+        startSimulation();
+      }
+      ctx.beginPath();
+      ctx.fillStyle = speciesProperties[selectedSpecies].color;
+      ctx.arc(x, y, 2, 0, 2 * Math.PI);
+      ctx.fill();
+
+      // Add the sample with initial branches
+      const initialBranches = [];
+      const numBranches = 8;
+      for (let i = 0; i < numBranches; i++) {
+        initialBranches.push({
+          x: x,
+          y: y,
+          angle: (i / numBranches) * 2 * Math.PI + (Math.random() - 0.5) * 0.1,
+          age: 0,
+        });
+      }
+
+      samples.push({
+        species: selectedSpecies,
+        branches: initialBranches,
+        id: generateSampleId(),
+        color: speciesProperties[selectedSpecies].color,
+        nutrients: 0,
+        isContaminant: false,
+      });
+    }
+
+    // Function to place a tissue sample
+    function placeRandomTissue(x, y) {
+      if (!simulationRunning) {
+        startSimulation();
+      }
+      // Generate random polygon shape
+      const numPoints = Math.floor(Math.random() * 5) + 5;
+      const radius = Math.random() * 10 + 5;
+      const angles = [];
+      for (let i = 0; i < numPoints; i++) {
+        angles.push((i / numPoints) * 2 * Math.PI + (Math.random() - 0.5) * 0.2);
+      }
+      angles.sort((a, b) => a - b);
+
+      ctx.beginPath();
+      for (let i = 0; i < numPoints; i++) {
+        const px = x + Math.cos(angles[i]) * radius * (Math.random() * 0.4 + 0.8);
+        const py = y + Math.sin(angles[i]) * radius * (Math.random() * 0.4 + 0.8);
+        if (i === 0) {
+          ctx.moveTo(px, py);
+        } else {
+          ctx.lineTo(px, py);
+        }
+      }
+      ctx.closePath();
+      ctx.fillStyle = speciesProperties[selectedSpecies].color;
+      ctx.fill();
+
+      // Add multiple samples within the tissue area
+      const numSamples = numPoints * 3;
+      const sampleId = generateSampleId();
+      for (let i = 0; i < numSamples; i++) {
+        const angle = Math.random() * 2 * Math.PI;
+        const dist = Math.random() * radius;
+        const sampleX = x + Math.cos(angle) * dist;
+        const sampleY = y + Math.sin(angle) * dist;
+
+        if (isInsidePetriDish(sampleX, sampleY)) {
+          const initialBranches = [];
+          const numBranches = 8;
+          for (let j = 0; j < numBranches; j++) {
+            initialBranches.push({
+              x: sampleX,
+              y: sampleY,
+              angle: (j / numBranches) * 2 * Math.PI + (Math.random() - 0.5) * 0.1,
+              age: 0,
+            });
+          }
+
+          samples.push({
+            species: selectedSpecies,
+            branches: initialBranches,
+            id: sampleId,
+            color: speciesProperties[selectedSpecies].color,
+            nutrients: 0,
+            isContaminant: false,
+          });
+        }
+      }
+    }
+    // Function to place a contaminant
+    function placeContaminant(x, y) {
+      if (!simulationRunning) {
+        startSimulation();
+      }
+      ctx.beginPath();
+      ctx.fillStyle = speciesProperties[selectedContaminant].color;
+      ctx.arc(x, y, 2, 0, 2 * Math.PI);
+      ctx.fill();
+
+      const initialBranches = [];
+      const numBranches = 6;
+      for (let i = 0; i < numBranches; i++) {
+        initialBranches.push({
+          x: x,
+          y: y,
+          angle: (i / numBranches) * 2 * Math.PI + (Math.random() - 0.5) * 0.2,
+          age: 0,
+        });
+      }
+
+      contaminants.push({
+        species: selectedContaminant,
+        branches: initialBranches,
+        id: generateSampleId(),
+        color: speciesProperties[selectedContaminant].color,
+        nutrients: 0,
+        isContaminant: true,
+      });
+    }
+
+    // Function to generate a unique ID
+    function generateSampleId() {
+      return Math.random().toString(36).substr(2, 9);
+    }
+
+    // Simulation interval variable
+    let simulationInterval;
+
+    // Virtual hour counter
+    let virtualHours = 0;
+    const hourDisplay = document.getElementById('hourDisplay');
+
+    // Function to calculate pH growth factor
+    function getpHGrowthFactor(pH, species) {
+      const speciespH = {
+        shiitake: 5.5,
+        oyster: 6.0,
+        pinkOyster: 6.0,
+        enoki: 6.5,
+        cordyceps: 6.8,
+        lionsMane: 6.0,
+        buttonMushroom: 6.2,
+        cremini: 6.2,
+        portobello: 6.2,
+        maitake: 5.8,
+        blackTrumpet: 6.0,
+        morel: 7.0,
+        mold: 5.0,
+        mildew: 6.5,
+        bacteria: 7.0,
+        virus: 6.5,
+      };
+
+      const optimalpH = speciespH[species] || 6.5; // Default optimal pH
+      const pHTolerance = 2.0; // pH units where growth is acceptable
+      const pHDifference = Math.abs(pH - optimalpH);
+      const pHFactor = Math.max(0, 1 - (pHDifference / pHTolerance));
+      return pHFactor;
+    }
+
+    // Function to calculate temperature growth factor
+    function getTemperatureGrowthFactor(temperature, species) {
+      const speciesTemps = {
+        shiitake: { optimal: 60, range: 20 },
+        oyster: { optimal: 65, range: 25 },
+        pinkOyster: { optimal: 80, range: 20 },
+        enoki: { optimal: 55, range: 15 },
+        cordyceps: { optimal: 68, range: 15 },
+        lionsMane: { optimal: 60, range: 20 },
+        psilocybe: { optimal: 75, range: 15 },
+        buttonMushroom: { optimal: 65, range: 15 },
+        cremini: { optimal: 65, range: 15 },
+        portobello: { optimal: 65, range: 15 },
+        maitake: { optimal: 60, range: 20 },
+        blackTrumpet: { optimal: 55, range: 20 },
+        morel: { optimal: 55, range: 20 },
+        mold: { optimal: 70, range: 30 },
+        mildew: { optimal: 75, range: 25 },
+        bacteria: { optimal: 98.6, range: 20 },
+        virus: { optimal: 90, range: 30 },
+      };
+
+      const speciesTemp = speciesTemps[species] || { optimal: 70, range: 20 };
+      const tempDifference = Math.abs(temperature - speciesTemp.optimal);
+      const tempFactor = Math.max(0, 1 - (tempDifference / speciesTemp.range));
+      return tempFactor;
+    }
+
+    // Function to calculate humidity growth factor
+    function getHumidityGrowthFactor(humidity, species) {
+      const speciesHumidity = {
+        shiitake: { optimal: 80, range: 20 },
+        oyster: { optimal: 85, range: 15 },
+        pinkOyster: { optimal: 90, range: 10 },
+        enoki: { optimal: 90, range: 10 },
+        cordyceps: { optimal: 75, range: 20 },
+        lionsMane: { optimal: 85, range: 15 },
+        buttonMushroom: { optimal: 90, range: 15 },
+        cremini: { optimal: 90, range: 15 },
+        portobello: { optimal: 85, range: 10 },
+        maitake: { optimal: 80, range: 20 },
+        blackTrumpet: { optimal: 75, range: 20 },
+        morel: { optimal: 70, range: 20 },
+        mold: { optimal: 90, range: 20 },
+        mildew: { optimal: 95, range: 15 },
+        bacteria: { optimal: 85, range: 20 },
+        virus: { optimal: 80, range: 30 },
+      };
+
+      const speciesHumidityRange = speciesHumidity[species] || { optimal: 80, range: 20 };
+      const humidityDifference = Math.abs(humidity - speciesHumidityRange.optimal);
+      const humidityFactor = Math.max(0, 1 - (humidityDifference / speciesHumidityRange.range));
+      return humidityFactor;
+    }
+// Function to clear the console log
+function clearConsole() {
+  const consoleDiv = document.getElementById('console');
+  consoleDiv.innerHTML = ''; // Clear all log entries
+}
+
+    // Simulation loop
+    function simulate() {
+      // Update virtual hours
+      virtualHours += 1;
+      hourDisplay.textContent = `Virtual Hours: ${virtualHours}`;
+
+      // No canvas clearing; we draw filaments only once
+// Example log for demonstration purposes
+setInterval(() => {
+  if (simulationRunning) {
+        logToConsole(`Virtual Hours: ${virtualHours}, Samples: ${samples.length}, Contaminants: ${contaminants.length}`);
+        logToConsole(`Organism ${organism.id} merged with ${occupyingOrganism.id}. Nutrients increased to ${organism.nutrients}.`);
+        logToConsole(`Organism ${organism.id} growth stopped due to interaction with ${occupyingOrganism.id}.`);
+        logToConsole(`Organism ${organism.id} experienced starvation at (${newX.toFixed(2)}, ${newY.toFixed(2)}).`);
+        logToConsole(`Organism ${organism.id} started forming pins at edge (${branch.x.toFixed(2)}, ${branch.y.toFixed(2)}).`);
+  }
+}, 2000);
+
+
+
+      // Simulate mycelium samples
+      samples.forEach((sample) => {
+        simulateOrganism(sample, 'mycelium');
+      });
+
+      // Simulate contaminants
+      contaminants.forEach((contaminant) => {
+        simulateOrganism(contaminant, 'contaminant');
+      });
+
+      // Remove samples with no more branches
+      samples = samples.filter(sample => sample.branches.length > 0);
+      contaminants = contaminants.filter(contaminant => contaminant.branches.length > 0);
+
+      // Stop the simulation if no organisms are left
+      if (samples.length === 0 && contaminants.length === 0) {
+        stopSimulation();
+      }
+    }
+
+    // Function to simulate organism growth (both mycelium and contaminants)
+    function simulateOrganism(organism, type) {
+      const speciesProp = speciesProperties[organism.species];
+      const agarGrowthRate = getAgarGrowthRate(agarType, organism.species);
+
+      // Calculate environmental growth factors
+      const pHGrowthFactor = getpHGrowthFactor(pH, organism.species);
+      const tempGrowthFactor = getTemperatureGrowthFactor(temperature, organism.species);
+      const humidityGrowthFactor = getHumidityGrowthFactor(humidity, organism.species);
+
+      // Adjust the base growth rate
+      let baseGrowthRate =
+        speciesProp.growthRate *
+        agarGrowthRate *
+        pHGrowthFactor *
+        tempGrowthFactor *
+        humidityGrowthFactor;
+
+      // If baseGrowthRate is zero or negative, skip this organism
+      if (baseGrowthRate <= 0) {
+        return; // Skip to the next organism
+      }
+
+      const newBranches = [];
+
+      organism.branches.forEach((branch) => {
+        branch.age += 1;
+
+        // Calculate growth direction and position
+        const dx = Math.cos(branch.angle) * baseGrowthRate;
+        const dy = Math.sin(branch.angle) * baseGrowthRate;
+        const newX = branch.x + dx;
+        const newY = branch.y + dy;
+
+        const gridX = Math.floor(newX);
+        const gridY = Math.floor(newY);
+
+        // Check if new position is within the dish
+        if (isInsidePetriDish(newX, newY)) {
+          // Check for occupancy
+          const occupyingOrganism = occupancyGrid[gridX][gridY];
+          if (occupyingOrganism && occupyingOrganism.id !== organism.id) {
+            // Interaction occurs
+            const interactionOutcome = determineInteractionOutcome(organism, occupyingOrganism);
+
+            if (interactionOutcome === 'merge') {
+              // Merge the organisms
+              occupancyGrid[gridX][gridY] = organism;
+              drawFilament(branch.x, branch.y, newX, newY, speciesProp, branch.age, true);
+
+              newBranches.push({
+                x: newX,
+                y: newY,
+                angle: branch.angle + (Math.random() - 0.5) * 0.3,
+                age: branch.age,
+              });
+
+              // Nutrient sharing upon merging
+              organism.nutrients += 10;
+            } else if (interactionOutcome === 'stop') {
+              // Branch stops growing
+              // Do nothing
+            } else if (interactionOutcome === 'overgrow') {
+              // Continue growing over existing organism
+              occupancyGrid[gridX][gridY] = organism;
+              drawFilament(branch.x, branch.y, newX, newY, speciesProp, branch.age, true);
+
+              newBranches.push({
+                x: newX,
+                y: newY,
+                angle: branch.angle + (Math.random() - 0.5) * 0.3,
+                age: branch.age,
+              });
+            } else if (interactionOutcome === 'avoid') {
+              // Change direction to avoid the contaminant
+              branch.angle += (Math.random() - 0.5) * Math.PI;
+
+              // If organism is mycelium and encountering a contaminant, produce antifungal response
+              if (!organism.isContaminant && occupyingOrganism.isContaminant) {
+                // Increase antifungal compound concentration at this location
+                antifungalGrid[gridX][gridY] += speciesProp.antifungalStrength || 1;
+
+                // Draw antifungal response visually
+                drawAntifungalResponse(newX, newY, speciesProp);
+              }
+            }
+          } else {
+            // Consume nutrients
+            const nutrient = nutrientGrid[gridX][gridY];
+            if (nutrient > 0) {
+              // Reduce nutrient level at the new position
+              nutrientGrid[gridX][gridY] = Math.max(0, nutrient - 0.5);
+
+              // Adjust growth rate based on nutrient level
+              const nutrientFactor = nutrient / 100; // Normalize nutrient level
+              const adjustedGrowthRate = baseGrowthRate * nutrientFactor;
+
+              // Occupy the grid
+              occupancyGrid[gridX][gridY] = organism;
+
+              // Draw the filament
+              drawFilament(branch.x, branch.y, newX, newY, speciesProp, branch.age, false);
+
+              // Add the new branch point
+              newBranches.push({
+                x: newX,
+                y: newY,
+                angle: branch.angle + (Math.random() - 0.5) * 0.3,
+                age: branch.age,
+              });
+
+              // Branching
+              if (Math.random() < speciesProp.branchingProbability * nutrientFactor) {
+                newBranches.push({
+                  x: newX,
+                  y: newY,
+                  angle: branch.angle + (Math.random() - 0.5) * Math.PI / 2,
+                  age: branch.age,
+                });
+              }
+            } else {
+              // Starvation effect
+              drawFilament(branch.x, branch.y, newX, newY, speciesProp, branch.age, false, true);
+              // Do not add new branches
+            }
+          }
+
+          // Contaminant inhibition due to antifungal compounds
+          if (organism.isContaminant) {
+            const antifungalLevel = antifungalGrid[gridX][gridY];
+            if (antifungalLevel > 0) {
+              // Reduce growth rate of contaminant based on antifungal level
+              baseGrowthRate *= Math.max(0, 1 - antifungalLevel * 0.1);
+            }
+          }
+        } else {
+          // At the edge
+          branch.atEdgeTime = (branch.atEdgeTime || 0) + 1;
+
+          if (branch.atEdgeTime > 50 && !speciesProp.isContaminant) {
+            // After some time at the edge, start forming pins (only for mycelium)
+            drawPin(branch.x, branch.y, speciesProp);
+          } else {
+            // Increase branching probability and adjust direction inward
+            const inwardAngle = Math.atan2(height / 2 - branch.y, width / 2 - branch.x);
+            const newAngle = inwardAngle + (Math.random() - 0.5) * 0.5;
+
+            // Increase branching at the edge
+            const edgeBranchingProbability = speciesProp.branchingProbability * 2;
+
+            if (Math.random() < edgeBranchingProbability) {
+              newBranches.push({
+                x: branch.x,
+                y: branch.y,
+                angle: newAngle,
+                age: branch.age,
+              });
+            }
+
+            // Optionally, simulate upward growth by drawing a small mushroom
+            if (!speciesProp.isContaminant) {
+              drawMushroom(branch.x, branch.y);
+            }
+          }
+        }
+      });
+
+      // Update the organism's branches
+      organism.branches = newBranches;
+    }
+
+    // Function to draw a filament
+    function drawFilament(x1, y1, x2, y2, speciesProp, age, isCompeting, isStarved) {
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+
+      let color = speciesProp.color;
+
+      // Competition effect
+      if (isCompeting) {
+        color = 'red';
+      }
+
+      // Starvation effect
+      if (isStarved) {
+        color = 'gray';
+      }
+
+      ctx.strokeStyle = color;
+
+      // Reduce filament thickness if starved
+      let thickness = speciesProp.filamentThickness;
+      if (isStarved) {
+        thickness = Math.max(0.1, thickness - 0.3);
+      }
+
+      ctx.lineWidth = Math.min(thickness, 1.5); // Cap thickness
+      ctx.stroke();
+    }
+
+    // Function to draw antifungal response
+    function drawAntifungalResponse(x, y, speciesProp) {
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, 2 * Math.PI);
+      ctx.fillStyle = 'rgba(173, 216, 230, 0.3)'; // LightBlue with transparency
+      ctx.fill();
+    }
+
+    // Function to draw a pin (fruiting body) at the edge
+    function drawPin(x, y, speciesProp) {
+      ctx.beginPath();
+      ctx.fillStyle = speciesProp.edgeColor;
+      ctx.arc(x, y, 4, 0, 2 * Math.PI);
+      ctx.fill();
+    }
+
+    // Function to draw a small mushroom (optional)
+    function drawMushroom(x, y) {
+      ctx.beginPath();
+      ctx.fillStyle = 'white';
+      ctx.arc(x, y, 3, 0, Math.PI, true); // Cap
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x - 1, y);
+      ctx.lineTo(x - 1, y + 5);
+      ctx.lineTo(x + 1, y + 5);
+      ctx.lineTo(x + 1, y);
+      ctx.fill();
+    }
+
+    // Function to determine the outcome of organism interaction
+    function determineInteractionOutcome(organism1, organism2) {
+      const speciesProp1 = speciesProperties[organism1.species];
+      const speciesProp2 = speciesProperties[organism2.species];
+
+      if (organism1.isContaminant && organism2.isContaminant) {
+        // Contaminant vs. contaminant interaction
+        if (Math.random() < 0.5) {
+          return 'overgrow';
+        } else {
+          return 'stop';
+        }
+      } else if (organism1.isContaminant || organism2.isContaminant) {
+        // Contaminant vs. mycelium interaction
+        if (speciesProp1.isContaminant) {
+          // Contaminant is trying to overgrow mycelium
+          if (Math.random() < speciesProp1.mergeProbability) {
+            return 'overgrow';
+          } else {
+            return 'stop';
+          }
+        } else {
+          // Mycelium is encountering a contaminant
+          if (Math.random() < 0.7) {
+            return 'avoid'; // Mycelium tries to avoid the contaminant
+          } else {
+            return 'stop';
+          }
+        }
+      } else {
+        // Mycelium vs. mycelium interaction
+        const rand = Math.random();
+        if (rand < speciesProp1.mergeProbability) {
+          return 'merge';
+        } else if (rand < speciesProp1.mergeProbability + 0.3) {
+          return 'stop';
+        } else {
+          return 'overgrow';
+        }
+      }
+    }
+
+    // Function to get agar growth rate based on agar type and species preference
+    function getAgarGrowthRate(agar, species) {
+      const growthRates = {
+        charcoal: 0.9,
+        blood: 1.1,
+        dextrose: 1.0,
+        feces: 0.8,
+        maltExtract: 1.2,
+        fungalAgar: 1.1,
+        sabouraud: 1.0,
+      };
+      const baseRate = growthRates[agar] || 0.9;
+
+      // Increase growth rate if agar matches species preference
+      const speciesProp = speciesProperties[species];
+      if (speciesProp.preferredAgar === agar || speciesProp.preferredAgar === 'any') {
+        return baseRate * 1.2; // Increase by 20%
+      } else {
+        return baseRate;
+      }
+    }
+
+    // Function to start or restart the simulation loop
+    function startSimulation() {
+        simulationRunning = true; // Set the flag to true
+        simulationInterval = setInterval(simulate, 1000 / (speed * 2)); // Adjust the multiplier for desired speed
+        // Clear console log data when resetting the simulation
+  clearConsole();
+
+// Clear the entire canvas before resetting the simulation
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+// Redraw the petri dish background to ensure it remains visible
+drawPetriDishBackground();
+
+// (Continue with existing code to start/reset the simulation, like reinitializing variables, nutrient grids, etc.)
+initializeNutrientGrid(); 
+
+    } 
+  
+
+    function stopSimulation() {
+      clearInterval(simulationInterval);
+      simulationRunning = false; // Set the flag to false
+    }
+
+    function restartSimulation() {
+      if (simulationRunning) {
+        stopSimulation();
+        startSimulation();
+        
+      }
+    }
+
+    // Reset functionality
+    document.getElementById('resetButton').addEventListener('click', () => {
+      stopSimulation();
+      virtualHours = 0; // Reset the virtual hours
+      hourDisplay.textContent = `Virtual Hours: ${virtualHours}`; // Update the display
+      samples = [];
+           contaminants = [];
+      initializeNutrientGrid();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      drawPetriDishBackground();
+    });
+
+    // Save functionality
+    document.getElementById('saveButton').addEventListener('click', () => {
+      const simulationData = {
+        virtualHours,
+        samples,
+        contaminants,
+        agarType,
+        pH,
+        temperature,
+        humidity,
+      };
+      const json = JSON.stringify(simulationData);
+      const blob = new Blob([json], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'mycelium_simulation.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    });
+
+    // Recording functionality
+    let recorder;
+let recordedChunks = [];
+
+document.getElementById('toggleRecordButton').addEventListener('click', () => {
+  const toggleButton = document.getElementById('toggleRecordButton');
+
+  if (toggleButton.textContent === 'Start Recording') {
+    console.log("Recording button clicked: Preparing to start recording...");
+
+    // Set the canvas background color just once before recording
+    ctx.save(); // Save the current state of the canvas
+    ctx.globalCompositeOperation = 'destination-over'; // Draw only behind existing content
+    ctx.fillStyle = '#1a1a1a'; // Dark grey background to match the UI
+    ctx.fillRect(0, 0, canvas.width, canvas.height); // Fill the entire canvas area
+    ctx.restore(); // Restore the canvas state
+
+    try {
+      // Reset the recorded chunks
+      recordedChunks = [];
+
+      // Capture the stream of the current canvas without making any further changes
+      const stream = canvas.captureStream();
+      console.log("Canvas stream captured.");
+
+      // Initialize a new MediaRecorder instance
+      recorder = new MediaRecorder(stream);
+      console.log("MediaRecorder initialized.");
+
+      // Collect video chunks as data becomes available
+      recorder.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          recordedChunks.push(e.data);
+        }
+      };
+
+      // Handle the stopping of recording and provide download option
+      recorder.onstop = () => {
+        console.log("Recording stopped, preparing the video for download...");
+        const blob = new Blob(recordedChunks, { type: 'video/webm' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'mycelium_simulation.webm';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      };
+
+      // Start the recording (without affecting the canvas state)
+      recorder.start();
+      console.log("Recording has started...");
+      toggleButton.textContent = 'Stop Recording';
+      toggleButton.style.backgroundColor = 'red';
+
+    } catch (error) {
+      console.error("Error while starting recording: ", error);
+    }
+
+  } else if (toggleButton.textContent === 'Stop Recording') {
+    console.log("Recording button clicked: Stopping the recording...");
+
+    // Stop recording without altering the canvas or simulation state
+    if (recorder && recorder.state === 'recording') {
+      recorder.stop();
+      console.log("Recorder has been stopped.");
+    } else {
+      console.error("Recorder was not in a valid state to stop.");
+    }
+
+    toggleButton.textContent = 'Start Recording';
+    toggleButton.style.backgroundColor = 'grey';
+  }
+});
+
+    document.getElementById('stopRecordButton').addEventListener('click', () => {
+      if (recorder && recorder.state === 'recording') {
+        recorder.stop();
+      }
+      document.getElementById('recordButton').disabled = false;
+      document.getElementById('stopRecordButton').disabled = true;
+    });
+
+    // Console log functionality
+    function logToConsole(message) {
+      const consoleDiv = document.getElementById('console');
+      const logEntry = document.createElement('div');
+      logEntry.textContent = message;
+      consoleDiv.appendChild(logEntry);
+      consoleDiv.scrollTop = consoleDiv.scrollHeight;
+    }
+
+   
+
+    // Add the initial nutrient grid and draw petri dish
+    initializeNutrientGrid();
+    drawPetriDishBackground();
+  </script>
+</body>
+</html>

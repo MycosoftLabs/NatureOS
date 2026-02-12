@@ -1,4 +1,4 @@
-﻿using Azure.Messaging.EventGrid;
+using Azure.Messaging.EventGrid;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Azure.Cosmos;
@@ -7,6 +7,7 @@ using NatureOS.MINDEX.Models;
 using NatureOS.Mycorrhizae;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace NatureOS.CoreApi.Services;
 
@@ -90,11 +91,83 @@ public class MycoBrainService : IMycoBrainService
             return new ProcessingResult { Success = true, Timestamp = DateTime.UtcNow, Message = $"Ignored {type}" };
 
         var json = Encoding.UTF8.GetString(payload);
-        var telemetry = JsonSerializer.Deserialize<MycoBrainTelemetry>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-        if (telemetry == null)
-            return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, Message = "Failed to parse telemetry payload" };
+        try
+        {
+            var telemetry = JsonSerializer.Deserialize<MycoBrainTelemetry>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            if (telemetry != null)
+                return await ProcessTelemetryAsync(telemetry, cancellationToken);
+        }
+        catch
+        {
+            // Fall through to envelope path.
+        }
 
-        return await ProcessTelemetryAsync(telemetry, cancellationToken);
+        try
+        {
+            using var doc = JsonDocument.Parse(json);
+            return await ProcessEnvelopeAsync(doc.RootElement, cancellationToken);
+        }
+        catch
+        {
+            return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, Message = "Failed to parse telemetry payload" };
+        }
+    }
+
+    public async Task<ProcessingResult> ProcessEnvelopeAsync(JsonElement envelope, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Minimal structural validation (full signature verification happens in Mycorrhizae/MAS).
+            if (!envelope.TryGetProperty("hdr", out var hdr) || hdr.ValueKind != JsonValueKind.Object)
+                return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, Message = "Invalid envelope: missing hdr" };
+
+            var deviceId = hdr.TryGetProperty("deviceId", out var d) ? d.GetString() : null;
+            var msgId = hdr.TryGetProperty("msgId", out var m) ? m.GetString() : null;
+            var seq = envelope.TryGetProperty("seq", out var s) && s.ValueKind == JsonValueKind.Number ? s.GetInt32() : -1;
+
+            if (string.IsNullOrWhiteSpace(deviceId) || string.IsNullOrWhiteSpace(msgId) || seq < 0)
+                return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, Message = "Invalid envelope: missing deviceId/msgId/seq" };
+
+            var mindexUrl = (Environment.GetEnvironmentVariable("MINDEX_API_URL") ?? "http://192.168.0.189:8000").TrimEnd('/');
+            var mindexApiKey = Environment.GetEnvironmentVariable("MINDEX_API_KEY") ?? "";
+            if (string.IsNullOrWhiteSpace(mindexApiKey))
+                return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, Message = "MINDEX_API_KEY not configured" };
+
+            using var http = new HttpClient { Timeout = TimeSpan.FromSeconds(10) };
+            http.DefaultRequestHeaders.Add("X-API-Key", mindexApiKey);
+
+            var body = JsonSerializer.Serialize(new { envelope, verified_by = "natureos" });
+            var resp = await http.PostAsync(
+                $"{mindexUrl}/api/telemetry/envelope",
+                new StringContent(body, Encoding.UTF8, "application/json"),
+                cancellationToken
+            );
+
+            var respText = await resp.Content.ReadAsStringAsync(cancellationToken);
+            if (!resp.IsSuccessStatusCode)
+            {
+                _logger.LogWarning("MINDEX envelope ingest failed {Status}: {Body}", (int)resp.StatusCode, respText);
+                return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, EventId = $"{deviceId}-{seq}", Message = "MINDEX ingest failed" };
+            }
+
+            // Broadcast envelope ingestion to dashboard clients (real-time).
+            await _hubContext.Clients.Group("DashboardUsers").SendAsync("DeviceEnvelope", new
+            {
+                DeviceId = deviceId,
+                MsgId = msgId,
+                Seq = seq,
+                Envelope = envelope,
+                Timestamp = DateTime.UtcNow,
+                Status = "Ingested"
+            }, cancellationToken);
+
+            return new ProcessingResult { Success = true, Timestamp = DateTime.UtcNow, EventId = $"{deviceId}-{seq}", Message = "Envelope ingested" };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to process envelope telemetry");
+            return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, Message = "Envelope processing failed" };
+        }
     }
 
     public async Task<bool> SendCommandAsync(MycoBrainCommand command, CancellationToken cancellationToken = default)

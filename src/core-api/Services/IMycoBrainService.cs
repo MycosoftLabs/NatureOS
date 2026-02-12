@@ -1,4 +1,5 @@
-﻿using NatureOS.MINDEX.Models;
+using NatureOS.MINDEX.Models;
+using System.Text.Json;
 
 namespace NatureOS.CoreApi.Services;
 
@@ -7,6 +8,7 @@ public interface IMycoBrainService
     Task<ProcessingResult> ProcessTelemetryAsync(MycoBrainTelemetry telemetry, CancellationToken cancellationToken = default);
     Task<ProcessingResult> ProcessNDJSONLineAsync(string jsonLine, CancellationToken cancellationToken = default);
     Task<ProcessingResult> ProcessMDPFrameAsync(byte[] frame, CancellationToken cancellationToken = default);
+    Task<ProcessingResult> ProcessEnvelopeAsync(JsonElement envelope, CancellationToken cancellationToken = default);
 
     Task<bool> SendCommandAsync(MycoBrainCommand command, CancellationToken cancellationToken = default);
 
