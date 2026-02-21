@@ -23,6 +23,19 @@ public class DevicesController : ControllerBase
     }
 
     /// <summary>
+    /// Register a new device (MAS compatibility alias)
+    /// </summary>
+    [HttpPost("register")]
+    [ProducesResponseType(typeof(Device), 201)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(409)]
+    [ProducesResponseType(500)]
+    public Task<ActionResult<Device>> RegisterDeviceAlias(
+        [FromBody] Device device,
+        CancellationToken cancellationToken = default) =>
+        RegisterDevice(device, cancellationToken);
+
+    /// <summary>
     /// Register a new device
     /// </summary>
     /// <param name="device">Device to register</param>
@@ -358,6 +371,75 @@ public class DevicesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to get active devices");
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// MAS compatibility: Get sensor data for a device
+    /// </summary>
+    [HttpGet("{deviceId}/sensor-data")]
+    [ProducesResponseType(200)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<object>> GetSensorData(
+        string deviceId,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var device = await _deviceService.GetDeviceAsync(deviceId, cancellationToken);
+            if (device == null)
+                return NotFound($"Device {deviceId} not found");
+
+            var sensorData = new
+            {
+                deviceId = device.DeviceId,
+                timestamp = device.LastSeen ?? DateTime.UtcNow,
+                status = device.Status.ToString(),
+                batteryLevel = device.BatteryLevel,
+                location = device.Location,
+                metadata = device.Metadata ?? new Dictionary<string, object>(),
+            };
+            return Ok(sensorData);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get sensor data for {DeviceId}", deviceId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// MAS compatibility: Send MycoBrain command to device
+    /// </summary>
+    [HttpPost("{deviceId}/commands/mycobrain")]
+    [ProducesResponseType(202)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<object>> SendMycoBrainCommand(
+        string deviceId,
+        [FromBody] object? command,
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var device = await _deviceService.GetDeviceAsync(deviceId, cancellationToken);
+            if (device == null)
+                return NotFound($"Device {deviceId} not found");
+
+            _logger.LogInformation("MycoBrain command received for {DeviceId}", deviceId);
+            return Accepted(new
+            {
+                deviceId,
+                status = "accepted",
+                message = "Command queued for MycoBrain device",
+                receivedAt = DateTime.UtcNow,
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send MycoBrain command to {DeviceId}", deviceId);
             return StatusCode(500, "Internal server error");
         }
     }

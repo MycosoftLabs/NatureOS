@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Cosmos;
 using Microsoft.ApplicationInsights.Extensibility;
 using Microsoft.Extensions.Diagnostics.HealthChecks;
@@ -110,6 +110,16 @@ builder.Services.AddScoped<IMasIngestionService, MasIngestionService>();
 builder.Services.AddScoped<IMycoBrainService, MycoBrainService>();
 builder.Services.AddScoped<IChatContextService, ChatContextService>();
 builder.Services.AddScoped<IFeedbackStore, FeedbackStore>();
+builder.Services.AddScoped<IMonitoringService, MonitoringService>();
+builder.Services.AddScoped<IAnalyticsService, AnalyticsService>();
+builder.Services.AddScoped<ILabToolsService, LabToolsService>();
+builder.Services.AddScoped<IShellService, ShellService>();
+builder.Services.AddScoped<IWorkflowService, WorkflowService>();
+builder.Services.AddScoped<IExportService, ExportService>();
+builder.Services.AddScoped<IAlertService, AlertService>();
+builder.Services.AddScoped<IMatlabIntegrationService, MatlabIntegrationService>();
+builder.Services.AddScoped<ICompoundAnalysisService, CompoundAnalysisService>();
+builder.Services.AddScoped<IGenomicsService, GenomicsService>();
 // Register background services
 builder.Services.AddHostedService<ProactiveMonitoringService>();
 

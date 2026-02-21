@@ -654,6 +654,7 @@ public class SystemMetrics
 
 public class SystemAlert
 {
+    public string? Id { get; set; }
     public string Type { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
     public string Severity { get; set; } = string.Empty; // Info, Warning, Critical
