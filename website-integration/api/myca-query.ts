@@ -1,9 +1,28 @@
 /**
  * MYCA (Mycosoft Cognitive Assistant) Integration API
  * Handles AI queries and responses for the NatureOS platform
+ *
+ * When embedded in mycosoft.com website: uses /api/myca/query (MAS proxy)
+ * When standalone: uses NATUREOS_API_URL (Azure)
  */
 
-const NATUREOS_API_BASE = process.env.NATUREOS_API_URL || 'https://natureos-api-production.azurewebsites.net';
+function getMycaBaseUrl(): string {
+  if (typeof window !== 'undefined') {
+    const origin = window.location.origin;
+    if (origin.includes('mycosoft.com') || origin.includes('localhost')) {
+      return origin;
+    }
+  }
+  return process.env.NATUREOS_API_URL || 'https://natureos-api-production.azurewebsites.net';
+}
+
+function getMycaQueryPath(): string {
+  const base = getMycaBaseUrl();
+  if (base.includes('mycosoft.com') || base.includes('localhost')) {
+    return `${base}/api/myca/query`;
+  }
+  return `${base}/api/mycosoft/myca/query`;
+}
 
 /**
  * MYCA query request structure
@@ -40,10 +59,14 @@ export interface MycaConversationItem {
  */
 export class MycaAPI {
   private baseURL: string;
+  private queryUrl: string;
   private conversationHistory: MycaConversationItem[] = [];
 
-  constructor(baseURL: string = NATUREOS_API_BASE) {
-    this.baseURL = baseURL;
+  constructor(baseURL?: string) {
+    this.baseURL = baseURL || getMycaBaseUrl();
+    this.queryUrl = baseURL
+      ? `${baseURL.replace(/\/$/, '')}/api/mycosoft/myca/query`
+      : getMycaQueryPath();
   }
 
   /**
@@ -57,7 +80,7 @@ export class MycaAPI {
         userId: userId || 'anonymous'
       };
 
-      const response = await fetch(`${this.baseURL}/api/mycosoft/myca/query`, {
+      const response = await fetch(this.queryUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
