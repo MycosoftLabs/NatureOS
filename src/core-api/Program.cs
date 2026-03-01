@@ -24,15 +24,20 @@ builder.Services.AddControllers()
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Add CORS
+// Add CORS — restrict to known Mycosoft origins
+var allowedOrigins = (Environment.GetEnvironmentVariable("CORS_ORIGINS") ??
+    "http://localhost:3000,http://192.168.0.187:3000,http://192.168.0.188:8001,http://192.168.0.189:8000,https://sandbox.mycosoft.com,https://mycosoft.com")
+    .Split(',', StringSplitOptions.RemoveEmptyEntries);
+
 builder.Services.AddCors(options =>
 {
-    options.AddDefaultPolicy(builder =>
+    options.AddDefaultPolicy(policy =>
     {
-        builder
-            .AllowAnyOrigin()
+        policy
+            .WithOrigins(allowedOrigins)
             .AllowAnyMethod()
-            .AllowAnyHeader();
+            .AllowAnyHeader()
+            .AllowCredentials();
     });
 });
 
