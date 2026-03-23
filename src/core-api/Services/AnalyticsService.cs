@@ -36,7 +36,7 @@ public class AnalyticsService : IAnalyticsService
         return new TimeSeriesResult { Metric = metric, DataPoints = points };
     }
 
-    public async Task<BiodiversityMetrics> GetBiodiversityMetricsAsync(DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default)
+    public async Task<AnalyticsBiodiversityMetrics> GetBiodiversityMetricsAsync(DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default)
     {
         var query = new EventQuery
         {
@@ -56,7 +56,7 @@ public class AnalyticsService : IAnalyticsService
             .Where(s => !string.IsNullOrEmpty(s))
             .ToArray();
 
-        var metrics = new BiodiversityMetrics
+        var metrics = new AnalyticsBiodiversityMetrics
         {
             SpeciesCount = speciesIds.Distinct().Count(),
             ObservationCount = items.Count,

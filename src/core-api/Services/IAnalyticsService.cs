@@ -13,7 +13,7 @@ public interface IAnalyticsService
     /// <summary>
     /// Get biodiversity metrics
     /// </summary>
-    Task<BiodiversityMetrics> GetBiodiversityMetricsAsync(DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default);
+    Task<AnalyticsBiodiversityMetrics> GetBiodiversityMetricsAsync(DateTime? start = null, DateTime? end = null, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Get analytics report summary
@@ -42,7 +42,7 @@ public class TimeSeriesPoint
 /// <summary>
 /// Biodiversity metrics
 /// </summary>
-public class BiodiversityMetrics
+public class AnalyticsBiodiversityMetrics
 {
     public int SpeciesCount { get; set; }
     public int ObservationCount { get; set; }

@@ -55,9 +55,9 @@ public class AnalyticsController : ControllerBase
     /// Get biodiversity metrics
     /// </summary>
     [HttpGet("biodiversity")]
-    [ProducesResponseType(typeof(BiodiversityMetrics), 200)]
+    [ProducesResponseType(typeof(AnalyticsBiodiversityMetrics), 200)]
     [ProducesResponseType(500)]
-    public async Task<ActionResult<BiodiversityMetrics>> GetBiodiversity(
+    public async Task<ActionResult<AnalyticsBiodiversityMetrics>> GetBiodiversity(
         [FromQuery] DateTime? start = null,
         [FromQuery] DateTime? end = null,
         CancellationToken cancellationToken = default)
