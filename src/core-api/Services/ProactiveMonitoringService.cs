@@ -603,7 +603,7 @@ public class ProactiveMonitoringService : BackgroundService
             using var scope = _serviceProvider.CreateScope();
             var client = scope.ServiceProvider.GetRequiredService<ServiceBusClient>();
             var receiver = client.CreateReceiver("mycorrhizae-events");
-            await receiver.PeekMessageAsync(TimeSpan.FromSeconds(2));
+            await receiver.ReceiveMessageAsync(TimeSpan.FromSeconds(2));
             await receiver.CloseAsync();
             return true;
         }

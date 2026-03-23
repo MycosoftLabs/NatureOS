@@ -115,17 +115,6 @@ public class Device
     public DateTime UpdatedAt { get; set; }
 }
 
-/// <summary>
-/// Device status enumeration
-/// </summary>
-public enum DeviceStatus
-{
-    Unknown,
-    Online,
-    Offline,
-    Maintenance,
-    Error
-}
 
 /// <summary>
 /// Device statistics
