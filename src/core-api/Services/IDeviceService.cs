@@ -82,7 +82,7 @@ public class Device
     /// <summary>
     /// Device status
     /// </summary>
-    public DeviceStatus Status { get; set; } = DeviceStatus.Unknown;
+    public NatureOS.MINDEX.Models.DeviceStatus Status { get; set; } = NatureOS.MINDEX.Models.DeviceStatus.Unknown;
 
     /// <summary>
     /// Last seen timestamp
@@ -139,7 +139,7 @@ public class DeviceStatistics
     /// <summary>
     /// Devices by status
     /// </summary>
-    public Dictionary<DeviceStatus, long> DevicesByStatus { get; set; } = new();
+    public Dictionary<NatureOS.MINDEX.Models.DeviceStatus, long> DevicesByStatus { get; set; } = new();
 
     /// <summary>
     /// Devices by type

@@ -1,0 +1,23 @@
+﻿build	Build	∩╗┐2026-03-23T16:06:58.9517432Z ##[group]Run dotnet build src/core-api/NatureOS.CoreApi.csproj --no-restore --configuration Release
+build	Build	2026-03-23T16:06:58.9518153Z [36;1mdotnet build src/core-api/NatureOS.CoreApi.csproj --no-restore --configuration Release[0m
+build	Build	2026-03-23T16:06:58.9570612Z shell: /usr/bin/bash -e {0}
+build	Build	2026-03-23T16:06:58.9570860Z env:
+build	Build	2026-03-23T16:06:58.9571090Z   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+build	Build	2026-03-23T16:06:58.9571380Z   DOTNET_ROOT: /usr/share/dotnet
+build	Build	2026-03-23T16:06:58.9571621Z ##[endgroup]
+build	Build	2026-03-23T16:07:04.2654686Z   NatureOS.MINDEX -> /home/runner/work/NatureOS/NatureOS/src/mindex/bin/Release/net8.0/NatureOS.MINDEX.dll
+build	Build	2026-03-23T16:07:05.1066264Z   NatureOS.Mycorrhizae -> /home/runner/work/NatureOS/NatureOS/src/mycorrhizae/bin/Release/net8.0/NatureOS.Mycorrhizae.dll
+build	Build	2026-03-23T16:07:05.4268896Z   The package NatureOS.MINDEX.1.0.0 is missing a readme. Go to https://aka.ms/nuget/authoring-best-practices/readme to learn why package readmes are important.
+build	Build	2026-03-23T16:07:05.4271961Z   Successfully created package '/home/runner/work/NatureOS/NatureOS/src/mindex/bin/Release/NatureOS.MINDEX.1.0.0.nupkg'.
+build	Build	2026-03-23T16:07:05.6889473Z   The package NatureOS.Mycorrhizae.1.0.0 is missing a readme. Go to https://aka.ms/nuget/authoring-best-practices/readme to learn why package readmes are important.
+build	Build	2026-03-23T16:07:05.6893040Z   Successfully created package '/home/runner/work/NatureOS/NatureOS/src/mycorrhizae/bin/Release/NatureOS.Mycorrhizae.1.0.0.nupkg'.
+build	Build	2026-03-23T16:07:07.0313234Z ##[error]/home/runner/work/NatureOS/NatureOS/src/core-api/Controllers/MasDevicesController.cs(302,46): error CS0234: The type or namespace name 'DeviceStatus' does not exist in the namespace 'NatureOS.CoreApi.Services' (are you missing an assembly reference?) [/home/runner/work/NatureOS/NatureOS/src/core-api/NatureOS.CoreApi.csproj]
+build	Build	2026-03-23T16:07:07.0421135Z 
+build	Build	2026-03-23T16:07:07.0433693Z Build FAILED.
+build	Build	2026-03-23T16:07:07.0436332Z 
+build	Build	2026-03-23T16:07:07.0440009Z ##[error]/home/runner/work/NatureOS/NatureOS/src/core-api/Controllers/MasDevicesController.cs(302,46): error CS0234: The type or namespace name 'DeviceStatus' does not exist in the namespace 'NatureOS.CoreApi.Services' (are you missing an assembly reference?) [/home/runner/work/NatureOS/NatureOS/src/core-api/NatureOS.CoreApi.csproj]
+build	Build	2026-03-23T16:07:07.0443138Z     0 Warning(s)
+build	Build	2026-03-23T16:07:07.0443475Z     1 Error(s)
+build	Build	2026-03-23T16:07:07.0443681Z 
+build	Build	2026-03-23T16:07:07.0443873Z Time Elapsed 00:00:07.82
+build	Build	2026-03-23T16:07:07.0739542Z ##[error]Process completed with exit code 1.

@@ -293,23 +293,13 @@ public class MasDevicesController : ControllerBase
             Name = device.DeviceId,
             DeviceType = device.DeviceType,
             Location = device.Location,
-            Status = MapStatus(device.Status),
+            Status = device.Status,
             LastSeen = device.LastSeen,
             Metadata = metadata
         };
     }
 
-    private static NatureOS.CoreApi.Services.DeviceStatus MapStatus(NatureOS.MINDEX.Models.DeviceStatus status)
-    {
-        return status switch
-        {
-            NatureOS.MINDEX.Models.DeviceStatus.Online => NatureOS.CoreApi.Services.DeviceStatus.Online,
-            NatureOS.MINDEX.Models.DeviceStatus.Offline => NatureOS.CoreApi.Services.DeviceStatus.Offline,
-            NatureOS.MINDEX.Models.DeviceStatus.Maintenance => NatureOS.CoreApi.Services.DeviceStatus.Maintenance,
-            NatureOS.MINDEX.Models.DeviceStatus.Error => NatureOS.CoreApi.Services.DeviceStatus.Error,
-            _ => NatureOS.CoreApi.Services.DeviceStatus.Unknown
-        };
-    }
+
 }
 
 public sealed class MasMycoBrainCommandRequest
