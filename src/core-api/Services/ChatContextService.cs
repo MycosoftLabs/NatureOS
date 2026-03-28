@@ -1,4 +1,4 @@
-﻿namespace NatureOS.CoreApi.Services;
+namespace NatureOS.CoreApi.Services;
 
 public sealed class ChatContextService : IChatContextService
 {
@@ -16,7 +16,7 @@ public sealed class ChatContextService : IChatContextService
         var deviceStats = await _deviceService.GetDeviceStatisticsAsync(cancellationToken);
         var eventStats = await _eventService.GetEventStatisticsAsync(new EventQuery(), cancellationToken);
 
-        deviceStats.DevicesByStatus.TryGetValue(DeviceStatus.Online, out var onlineCount);
+        deviceStats.DevicesByStatus.TryGetValue(NatureOS.MINDEX.Models.DeviceStatus.Online, out var onlineCount);
 
         return new
         {
