@@ -56,7 +56,6 @@ public class MycosoftController : ControllerBase
         Response.Headers["Content-Type"] = "text/event-stream";
         Response.Headers["Cache-Control"] = "no-cache";
         Response.Headers["Connection"] = "keep-alive";
-        Response.Headers["Access-Control-Allow-Origin"] = "*";
 
         _logger.LogInformation("Started event stream for client");
 
@@ -67,7 +66,7 @@ public class MycosoftController : ControllerBase
                 var latestEvents = await _eventService.GetEventsAsync(new Services.EventQuery
                 {
                     Limit = 5,
-                    SortOrder = "desc"
+                    SortOrder = "timestamp_desc"
                 });
 
                 var data = JsonSerializer.Serialize(latestEvents.Items, new JsonSerializerOptions
@@ -99,8 +98,9 @@ public class MycosoftController : ControllerBase
     {
         try
         {
-            var ok = await _masIngestionService.IngestContextAsync(payload);
-            if (!ok) return StatusCode(500, new { error = "Failed to ingest context" });
+            var result = await _masIngestionService.IngestContextAsync(payload);
+            if (!result.Success)
+                return StatusCode(500, new { error = result.Error, timestamp = result.Timestamp });
 
             await _hubContext.Clients.Group("MycaUsers").SendAsync("SystemUpdate", new
             {
@@ -108,7 +108,7 @@ public class MycosoftController : ControllerBase
                 Timestamp = DateTime.UtcNow
             });
 
-            return Ok(new { status = "ok" });
+            return Ok(new { status = "ok", documentId = result.DocumentId });
         }
         catch (Exception ex)
         {
@@ -126,7 +126,6 @@ public class MycosoftController : ControllerBase
         Response.Headers["Content-Type"] = "text/event-stream";
         Response.Headers["Cache-Control"] = "no-cache";
         Response.Headers["Connection"] = "keep-alive";
-        Response.Headers["Access-Control-Allow-Origin"] = "*";
 
         _logger.LogInformation("Started dashboard stream for client");
 
@@ -215,7 +214,7 @@ public class MycosoftController : ControllerBase
             var recent = await _eventService.GetEventsAsync(new Services.EventQuery
             {
                 Limit = 20,
-                SortOrder = "desc"
+                SortOrder = "timestamp_desc"
             }, cancellationToken);
 
             var ctx = await _chatCtx.BuildLightweightContextAsync(cancellationToken);
@@ -374,18 +373,34 @@ Please provide a helpful response that considers the current system state and da
             var deviceStats = await _deviceService.GetDeviceStatisticsAsync();
             var eventStats = await _eventService.GetEventStatisticsAsync(new Services.EventQuery());
 
+            var healthScore = CalculateSystemHealth(deviceStats, eventStats);
+            var overallStatus = healthScore >= 80 ? "Healthy" : healthScore >= 50 ? "Degraded" : "Unhealthy";
+
+            // Probe MAS health by attempting a lightweight context ingestion
+            string masStatus;
+            try
+            {
+                var probe = await _masIngestionService.IngestContextAsync(new { type = "health_check", timestamp = DateTime.UtcNow });
+                masStatus = probe.Success ? "Healthy" : "Unhealthy";
+            }
+            catch
+            {
+                masStatus = "Unhealthy";
+            }
+
             var status = new
             {
-                Overall = "Healthy",
+                Overall = overallStatus,
+                HealthScore = healthScore,
                 Timestamp = DateTime.UtcNow,
                 Services = systemContext,
                 Devices = deviceStats,
                 Events = eventStats,
                 Integrations = new
                 {
-                    Website = "Unknown",
-                    MAS = "Unknown",
-                    ExternalDatabases = "Unknown"
+                    Website = overallStatus,
+                    MAS = masStatus,
+                    ExternalDatabases = overallStatus
                 }
             };
 
@@ -405,6 +420,22 @@ Please provide a helpful response that considers the current system state and da
         var deviceStats = await _deviceService.GetDeviceStatisticsAsync();
         var eventStats = await _eventService.GetEventStatisticsAsync(new Services.EventQuery());
 
+        // Derive TopSpecies from EventsByDomain (top 5, excluding error/telemetry domains)
+        var excludedDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "error", "telemetry" };
+        var topSpecies = eventStats.EventsByDomain
+            .Where(kvp => !excludedDomains.Any(ex => kvp.Key.Contains(ex, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(kvp => kvp.Value)
+            .Take(5)
+            .Select(kvp => kvp.Key)
+            .ToArray();
+
+        // Derive TopDevices from EventsByDevice (top 5)
+        var topDevices = eventStats.EventsByDevice
+            .OrderByDescending(kvp => kvp.Value)
+            .Take(5)
+            .Select(kvp => kvp.Key)
+            .ToArray();
+
         return new
         {
             ActiveDevices = deviceStats.ActiveDevices,
@@ -412,7 +443,9 @@ Please provide a helpful response that considers the current system state and da
             EventsToday = eventStats.TodayCount,
             EventsPerHour = eventStats.AveragePerHour,
             SystemHealth = CalculateSystemHealth(deviceStats, eventStats),
-            TopSpecies = Array.Empty<string>(),
+            TopSpecies = topSpecies,
+            UniqueSpeciesCount = eventStats.UniqueSpeciesCount,
+            TopDevices = topDevices,
             AverageEventsPerDay = eventStats.AveragePerDay
         };
     }
@@ -469,7 +502,7 @@ Please provide a helpful response that considers the current system state and da
     {
         var eventStats = await _eventService.GetEventStatisticsAsync(new Services.EventQuery(), cancellationToken);
         var deviceStats = await _deviceService.GetDeviceStatisticsAsync(cancellationToken);
-        var recentEvents = await _eventService.GetEventsAsync(new Services.EventQuery { Limit = 50, SortOrder = "desc" }, cancellationToken);
+        var recentEvents = await _eventService.GetEventsAsync(new Services.EventQuery { Limit = 50, SortOrder = "timestamp_desc" }, cancellationToken);
 
         deviceStats.DevicesByStatus.TryGetValue(DeviceStatus.Online, out var onlineCount);
 
@@ -498,7 +531,13 @@ Please provide a helpful response that considers the current system state and da
             },
             Insights = new WebsiteDashboardInsights
             {
-                TrendingCompounds = Array.Empty<string>(),
+                TrendingCompounds = recentEvents.Items
+                    .Where(e => e.KingdomDomain.StartsWith("FUNGA.", StringComparison.OrdinalIgnoreCase))
+                    .GroupBy(e => e.KingdomDomain, StringComparer.OrdinalIgnoreCase)
+                    .OrderByDescending(g => g.Count())
+                    .Take(5)
+                    .Select(g => g.Key)
+                    .ToArray(),
                 RecentDiscoveries = recentEvents.Items.Where(e => e.KingdomDomain.Contains("discovery", StringComparison.OrdinalIgnoreCase)).Take(3).Cast<object>().ToArray()
             }
         };

@@ -1,6 +1,7 @@
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Logging;
 using NatureOS.MINDEX.Models;
+using System.Net;
 
 namespace NatureOS.CoreApi.Services;
 
@@ -18,8 +19,17 @@ public class MasIngestionService : IMasIngestionService
         _logger = logger;
     }
 
-    public async Task<bool> IngestEventAsync(MycorrhizaeEvent mycorrhizaeEvent, CancellationToken cancellationToken = default)
+    public async Task<MasIngestionResult> IngestEventAsync(MycorrhizaeEvent mycorrhizaeEvent, CancellationToken cancellationToken = default)
     {
+        if (mycorrhizaeEvent == null)
+            return MasIngestionResult.Fail("Payload is null");
+
+        if (string.IsNullOrWhiteSpace(mycorrhizaeEvent.EventId))
+            return MasIngestionResult.Fail("EventId is missing");
+
+        if (string.IsNullOrWhiteSpace(mycorrhizaeEvent.SourceDevice))
+            return MasIngestionResult.Fail("SourceDevice is missing");
+
         try
         {
             var database = _cosmosClient.GetDatabase("mindex");
@@ -40,38 +50,48 @@ public class MasIngestionService : IMasIngestionService
 
             await container.CreateItemAsync(projection, new PartitionKey(mycorrhizaeEvent.SourceDevice), cancellationToken: cancellationToken);
             _logger.LogInformation("Projected event {EventId} into MAS graph container", mycorrhizaeEvent.EventId);
-            return true;
+            return MasIngestionResult.Ok(mycorrhizaeEvent.EventId);
+        }
+        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.Conflict)
+        {
+            // Idempotent: duplicate event already ingested
+            _logger.LogWarning("Duplicate event {EventId} already exists in MAS", mycorrhizaeEvent.EventId);
+            return MasIngestionResult.Ok(mycorrhizaeEvent.EventId);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to ingest event into MAS");
-            return false;
+            _logger.LogError(ex, "Failed to ingest event {EventId} into MAS", mycorrhizaeEvent.EventId);
+            return MasIngestionResult.Fail($"Ingestion failed: {ex.Message}");
         }
     }
 
-    public async Task<bool> IngestContextAsync(object contextPayload, CancellationToken cancellationToken = default)
+    public async Task<MasIngestionResult> IngestContextAsync(object contextPayload, CancellationToken cancellationToken = default)
     {
+        if (contextPayload == null)
+            return MasIngestionResult.Fail("Payload is null");
+
         try
         {
             var database = _cosmosClient.GetDatabase("mindex");
             var container = database.GetContainer("mas_context");
 
+            var documentId = Ulid.NewUlid().ToString();
             var document = new
             {
-                id = Ulid.NewUlid().ToString(),
+                id = documentId,
                 type = "context_signal",
                 timestamp = DateTime.UtcNow,
                 payload = contextPayload
             };
 
             await container.CreateItemAsync(document, new PartitionKey("context"), cancellationToken: cancellationToken);
-            _logger.LogInformation("Ingested context payload into MAS container");
-            return true;
+            _logger.LogInformation("Ingested context payload {DocumentId} into MAS container", documentId);
+            return MasIngestionResult.Ok(documentId);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to ingest context into MAS");
-            return false;
+            return MasIngestionResult.Fail($"Context ingestion failed: {ex.Message}");
         }
     }
 }

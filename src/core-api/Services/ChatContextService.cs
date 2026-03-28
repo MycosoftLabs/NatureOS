@@ -18,6 +18,14 @@ public sealed class ChatContextService : IChatContextService
 
         deviceStats.DevicesByStatus.TryGetValue(NatureOS.MINDEX.Models.DeviceStatus.Online, out var onlineCount);
 
+        var excludedDomains = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "error", "telemetry" };
+        var topSpecies = eventStats.EventsByDomain
+            .Where(kv => !excludedDomains.Any(ex => kv.Key.Contains(ex, StringComparison.OrdinalIgnoreCase)))
+            .OrderByDescending(kv => kv.Value)
+            .Take(5)
+            .Select(kv => kv.Key)
+            .ToArray();
+
         return new
         {
             activeDevices = onlineCount,
@@ -28,7 +36,10 @@ public sealed class ChatContextService : IChatContextService
                 .OrderByDescending(kv => kv.Value)
                 .Take(5)
                 .Select(kv => new { domain = kv.Key, count = kv.Value })
-                .ToArray()
+                .ToArray(),
+            topSpecies = topSpecies,
+            averageEventsPerDay = eventStats.AveragePerDay,
+            uniqueSpeciesCount = eventStats.UniqueSpeciesCount
         };
     }
 }

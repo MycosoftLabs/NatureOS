@@ -136,8 +136,9 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
             
             return new MycaResponse
             {
-                Answer = "I apologize, but I'm experiencing technical difficulties. Please try your question again in a moment.",
+                Answer = "[Synthetic] I apologize, but I'm experiencing technical difficulties. Please try your question again in a moment.",
                 Confidence = 0.0,
+                Synthetic = true,
                 Timestamp = DateTime.UtcNow,
                 SuggestedQuestions = new[]
                 {
@@ -348,20 +349,56 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
 
     private async Task<MycaResponse> GenerateContextAwareResponse(string enhancedQuery)
     {
-        // This would integrate with the actual MYCA AI system
-        // For now, we'll simulate intelligent responses based on query content
-        
+        // Gate: if MYCA_API_URL is configured, try live backend first
+        var mycaApiUrl = Environment.GetEnvironmentVariable("MYCA_API_URL");
+        if (!string.IsNullOrEmpty(mycaApiUrl))
+        {
+            try
+            {
+                var requestBody = new { query = enhancedQuery };
+                var content = new StringContent(
+                    JsonSerializer.Serialize(requestBody),
+                    System.Text.Encoding.UTF8,
+                    "application/json");
+                var httpResponse = await _httpClient.PostAsync($"{mycaApiUrl}/api/query", content);
+
+                if (httpResponse.IsSuccessStatusCode)
+                {
+                    var responseJson = await httpResponse.Content.ReadAsStringAsync();
+                    var liveResponse = JsonSerializer.Deserialize<MycaResponse>(responseJson, new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true
+                    });
+
+                    if (liveResponse != null)
+                    {
+                        liveResponse.Synthetic = false;
+                        liveResponse.Timestamp = DateTime.UtcNow;
+                        return liveResponse;
+                    }
+                }
+
+                _logger.LogWarning("MYCA backend returned non-success status {StatusCode}, falling back to synthetic", httpResponse.StatusCode);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "MYCA backend call failed, falling back to synthetic response");
+            }
+        }
+
+        // Synthetic fallback — all responses are clearly marked
         var response = new MycaResponse
         {
             Timestamp = DateTime.UtcNow,
-            Confidence = 0.85
+            Confidence = 0.0,
+            Synthetic = true
         };
 
         var queryLower = enhancedQuery.ToLower();
-        
+
         if (queryLower.Contains("device") || queryLower.Contains("mushroom"))
         {
-            response.Answer = "Based on current system data, your Mushroom 1 devices are operating normally. I can see 3 active sensors with good signal quality. Device health scores are averaging 92%. Would you like me to analyze any specific device metrics?";
+            response.Answer = "[Synthetic] Device data is available via the /devices and /api/mycosoft/status endpoints. Query those for live device health and metrics.";
             response.SuggestedQuestions = new[]
             {
                 "Show me device performance trends",
@@ -371,7 +408,7 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
         }
         else if (queryLower.Contains("species") || queryLower.Contains("fungi"))
         {
-            response.Answer = "I'm currently tracking 156 species across your network. Today's most active species include Agaricus bisporus (high metabolic activity), Pleurotus ostreatus (strong network connectivity), and Shiitake (elevated compound production). The diversity index is showing healthy ecosystem balance.";
+            response.Answer = "[Synthetic] Species data is available via the /api/mycosoft/website/dashboard endpoint. Query it for live species counts, trending compounds, and domain distributions.";
             response.SuggestedQuestions = new[]
             {
                 "What are the trending compounds?",
@@ -381,7 +418,7 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
         }
         else if (queryLower.Contains("health") || queryLower.Contains("status"))
         {
-            response.Answer = "System health is excellent at 94%. All core services are operational, data ingestion is running smoothly at 2.3k events/hour, and real-time processing latency is under 50ms. No critical alerts detected.";
+            response.Answer = "[Synthetic] System health data is available via the /api/mycosoft/status endpoint. Query it for live health scores and integration statuses.";
             response.SuggestedQuestions = new[]
             {
                 "Show me recent system alerts",
@@ -391,7 +428,7 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
         }
         else if (queryLower.Contains("network") || queryLower.Contains("connectivity"))
         {
-            response.Answer = "The mycorrhizal network shows strong interconnectivity with 89% of nodes actively communicating. I detect 7 major hub clusters with excellent cross-cluster bridges. Network resilience score is 0.92, indicating robust pathways for nutrient and information exchange.";
+            response.Answer = "[Synthetic] Network data is available via the event stream and dashboard endpoints. Query /api/mycosoft/website/live-data for real-time network activity.";
             response.SuggestedQuestions = new[]
             {
                 "Identify critical network nodes",
@@ -401,7 +438,7 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
         }
         else
         {
-            response.Answer = "I'm analyzing your query through the MINDEX database and current system state. Based on the contextual information, I can help you understand patterns in your fungal intelligence platform. What specific aspect would you like me to explore?";
+            response.Answer = "[Synthetic] I can help you explore your NatureOS data. Use /api/mycosoft/website/dashboard for live stats or /api/mycosoft/status for system health.";
             response.SuggestedQuestions = new[]
             {
                 "What's happening in my network right now?",
@@ -611,6 +648,7 @@ public class MycaResponse
     public double Confidence { get; set; }
     public DateTime Timestamp { get; set; }
     public string[]? SuggestedQuestions { get; set; }
+    public bool Synthetic { get; set; }
 }
 
 public class HplSimulationResult

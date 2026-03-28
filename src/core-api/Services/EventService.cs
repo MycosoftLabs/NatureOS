@@ -249,6 +249,30 @@ public class EventService : IEventService
                 statistics.TotalEvents = countResponse.FirstOrDefault();
             }
 
+            // Get today's event count
+            var todayStart = DateTime.UtcNow.Date;
+            var todayQuery = new QueryDefinition(
+                "SELECT VALUE COUNT(1) FROM c WHERE c.timestamp >= @todayStart")
+                .WithParameter("@todayStart", todayStart);
+            var todayIterator = _eventsContainer.GetItemQueryIterator<long>(todayQuery);
+            if (todayIterator.HasMoreResults)
+            {
+                var todayResponse = await todayIterator.ReadNextAsync(cancellationToken);
+                statistics.TodayCount = todayResponse.FirstOrDefault();
+            }
+
+            // Get unique species count via distinct decoded_meaning.type
+            var speciesQuery = new QueryDefinition(
+                "SELECT DISTINCT VALUE c.decoded_meaning.type FROM c WHERE c.decoded_meaning.type != null");
+            var speciesIterator = _eventsContainer.GetItemQueryIterator<string>(speciesQuery);
+            var speciesCount = 0L;
+            while (speciesIterator.HasMoreResults)
+            {
+                var speciesResponse = await speciesIterator.ReadNextAsync(cancellationToken);
+                speciesCount += speciesResponse.Count;
+            }
+            statistics.UniqueSpeciesCount = speciesCount;
+
             // Get events by domain
             var domainQuery = new QueryDefinition(
                 "SELECT c.kingdom_domain, COUNT(1) as count FROM c GROUP BY c.kingdom_domain");
@@ -291,6 +315,16 @@ public class EventService : IEventService
                         End = timeData.max_time
                     };
                 }
+            }
+
+            // Compute AveragePerHour and AveragePerDay from time range
+            if (statistics.TimeRange != null && statistics.TotalEvents > 0)
+            {
+                var totalSpan = statistics.TimeRange.End - statistics.TimeRange.Start;
+                if (totalSpan.TotalHours > 0)
+                    statistics.AveragePerHour = statistics.TotalEvents / totalSpan.TotalHours;
+                if (totalSpan.TotalDays > 0)
+                    statistics.AveragePerDay = statistics.TotalEvents / totalSpan.TotalDays;
             }
 
             return statistics;
