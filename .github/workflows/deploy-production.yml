@@ -58,9 +58,7 @@ jobs:
     - name: Azure Login
       uses: azure/login@v2
       with:
-        client-id: ${{ secrets.AZURE_CLIENT_ID }}
-        tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-        subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
     
     - name: Deploy to Azure Web App
       uses: azure/webapps-deploy@v3
@@ -73,4 +71,21 @@ jobs:
       run: |
         az logout
         az cache purge
-        az account clear 
+        az account clear
+
+  agentic-fallback:
+    needs: [build, deploy]
+    if: always() && contains(needs.*.result, 'failure')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Trigger Agentic Auto-Fix
+        run: |
+          echo "Build failed. Triggering Mycosoft Antigravity Agent for autonomous resolution..."
+          if [ -n "${{ secrets.AGENT_API_KEY }}" ]; then
+            curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${{ secrets.AGENT_API_KEY }}" \
+                 -d "{\"repo\": \"${{ github.repository }}\", \"run_id\": \"${{ github.run_id }}\"}" \
+                 https://api.mycosoft.com/agent/auto-fix || echo "Fallback triggered."
+          else
+            echo "Agentic hook called, awaiting implementation."
+          fi
