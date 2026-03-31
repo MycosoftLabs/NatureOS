@@ -320,10 +320,10 @@ public class ExternalDataIntegrationService : IExternalDataIntegrationService
                             Metadata = new Dictionary<string, object>
                             {
                                 ["mycobank_number"] = record.MBNumber,
-                                ["status"] = record.Status,
-                                ["basionym"] = record.Basionym,
+                                ["status"] = record.Status ?? "",
+                                ["basionym"] = record.Basionym ?? "",
                                 ["synonyms"] = record.Synonyms ?? new List<string>(),
-                                ["type_specimen"] = record.TypeSpecimen,
+                                ["type_specimen"] = record.TypeSpecimen ?? "",
                                 ["literature_references"] = record.References ?? new List<string>()
                             }
                         };
