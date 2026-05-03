@@ -204,6 +204,48 @@ public class MycosoftController : ControllerBase
     }
 
     /// <summary>
+    /// Fusarium-focused dashboard bridge for operator applications.
+    /// Reuses the existing website dashboard build path while exposing
+    /// stream endpoints and service state explicitly for cross-platform consumers.
+    /// </summary>
+    [HttpGet("fusarium/dashboard")]
+    public async Task<IActionResult> GetFusariumDashboard(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var dashboardData = await BuildWebsiteDashboardAsync(cancellationToken);
+            return Ok(new
+            {
+                status = "ok",
+                source = "natureos",
+                dashboard = dashboardData,
+                streams = new
+                {
+                    events = "/api/mycosoft/events/stream",
+                    dashboard = "/api/mycosoft/dashboard/stream",
+                    hub = "/natureos-hub"
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting Fusarium dashboard data");
+            return StatusCode(500, new { error = "Failed to get Fusarium dashboard data" });
+        }
+    }
+
+    [HttpGet("fusarium/stream-endpoints")]
+    public IActionResult GetFusariumStreamEndpoints()
+    {
+        return Ok(new
+        {
+            events = "/api/mycosoft/events/stream",
+            dashboard = "/api/mycosoft/dashboard/stream",
+            hub = "/natureos-hub"
+        });
+    }
+
+    /// <summary>
     /// NEW: mirror of what the website expects for suggestions/context
     /// Canonical response: { readings[], context }
     /// </summary>

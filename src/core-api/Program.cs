@@ -125,6 +125,7 @@ builder.Services.AddScoped<IAlertService, AlertService>();
 builder.Services.AddScoped<IMatlabIntegrationService, MatlabIntegrationService>();
 builder.Services.AddScoped<ICompoundAnalysisService, CompoundAnalysisService>();
 builder.Services.AddScoped<IGenomicsService, GenomicsService>();
+builder.Services.AddScoped<DeepAgentEventService>();
 // Register background services
 builder.Services.AddHostedService<ProactiveMonitoringService>();
 
@@ -133,6 +134,7 @@ builder.Services.AddScoped<ICacheService, CacheService>();
 builder.Services.AddHostedService<CacheWarmupService>();
 
 // HTTP client for external services
+builder.Services.AddHttpClient();
 builder.Services.AddHttpClient<FungaService>();
 builder.Services.AddHttpClient<MycosoftIntegrationService>();
 builder.Services.AddHttpClient<ExternalDataIntegrationService>();

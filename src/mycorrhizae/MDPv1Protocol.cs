@@ -13,7 +13,13 @@ public static class MDPv1Protocol
         Telemetry = 0x01,
         Command = 0x02,
         Event = 0x03,
-        Ack = 0x04
+        Ack = 0x04,
+        AcousticRaw = 0x20,
+        AcousticFingerprint = 0x21,
+        MagneticAnomaly = 0x22,
+        OceanEnvironment = 0x23,
+        TacticalAssessment = 0x24,
+        MaritimeRelay = 0x25
     }
 
     public static byte[] EncodeMessage(MessageType messageType, byte[] payload)

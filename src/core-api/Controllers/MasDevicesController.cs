@@ -16,15 +16,18 @@ public class MasDevicesController : ControllerBase
 {
     private readonly IDeviceService _deviceService;
     private readonly IMycoBrainService _mycoBrainService;
+    private readonly DeepAgentEventService _deepAgentEvents;
     private readonly ILogger<MasDevicesController> _logger;
 
     public MasDevicesController(
         IDeviceService deviceService,
         IMycoBrainService mycoBrainService,
+        DeepAgentEventService deepAgentEvents,
         ILogger<MasDevicesController> logger)
     {
         _deviceService = deviceService;
         _mycoBrainService = mycoBrainService;
+        _deepAgentEvents = deepAgentEvents;
         _logger = logger;
     }
 
@@ -76,6 +79,12 @@ public class MasDevicesController : ControllerBase
         }
 
         var registeredDevice = await _deviceService.RegisterDeviceAsync(device, cancellationToken);
+        await _deepAgentEvents.PublishAsync(
+            domain: "device",
+            task: $"NatureOS MAS-compatible device registered: {registeredDevice.DeviceId}",
+            context: new { route = "/devices/register", deviceId = registeredDevice.DeviceId, deviceType = registeredDevice.DeviceType },
+            preferredAgent: "ops-agent",
+            cancellationToken: cancellationToken);
         return CreatedAtAction(nameof(GetDevice), new { deviceId = registeredDevice.DeviceId }, registeredDevice);
     }
 
@@ -157,6 +166,13 @@ public class MasDevicesController : ControllerBase
             _logger.LogError("Failed to send MycoBrain command {CommandId} to {DeviceId}", commandId, deviceId);
             return StatusCode(500, new { error = "send_failed" });
         }
+
+        await _deepAgentEvents.PublishAsync(
+            domain: "device",
+            task: $"NatureOS MAS-compatible command sent: {request.CommandType}",
+            context: new { route = "/devices/{deviceId}/commands/mycobrain", deviceId, commandType = request.CommandType, sequence },
+            preferredAgent: "ops-agent",
+            cancellationToken: cancellationToken);
 
         return Ok(new { status = "sent", sequence });
     }

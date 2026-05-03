@@ -12,11 +12,16 @@ namespace NatureOS.CoreApi.Controllers;
 public class WorkflowController : ControllerBase
 {
     private readonly IWorkflowService _workflowService;
+    private readonly DeepAgentEventService _deepAgentEvents;
     private readonly ILogger<WorkflowController> _logger;
 
-    public WorkflowController(IWorkflowService workflowService, ILogger<WorkflowController> logger)
+    public WorkflowController(
+        IWorkflowService workflowService,
+        DeepAgentEventService deepAgentEvents,
+        ILogger<WorkflowController> logger)
     {
         _workflowService = workflowService;
+        _deepAgentEvents = deepAgentEvents;
         _logger = logger;
     }
 
@@ -31,6 +36,12 @@ public class WorkflowController : ControllerBase
         try
         {
             var workflows = await _workflowService.GetWorkflowsAsync(cancellationToken);
+            await _deepAgentEvents.PublishAsync(
+                domain: "natureos",
+                task: "NatureOS workflows list requested",
+                context: new { route = "/api/Workflow", count = workflows.Count() },
+                preferredAgent: "ops-agent",
+                cancellationToken: cancellationToken);
             return Ok(workflows);
         }
         catch (Exception ex)
@@ -56,6 +67,12 @@ public class WorkflowController : ControllerBase
             var workflow = await _workflowService.GetWorkflowAsync(workflowId, cancellationToken);
             if (workflow == null)
                 return NotFound($"Workflow {workflowId} not found");
+            await _deepAgentEvents.PublishAsync(
+                domain: "natureos",
+                task: $"NatureOS workflow requested: {workflowId}",
+                context: new { route = "/api/Workflow/{workflowId}", workflowId },
+                preferredAgent: "ops-agent",
+                cancellationToken: cancellationToken);
             return Ok(workflow);
         }
         catch (Exception ex)
@@ -82,6 +99,12 @@ public class WorkflowController : ControllerBase
                 return BadRequest("Workflow name is required");
 
             var saved = await _workflowService.SaveWorkflowAsync(workflow, cancellationToken);
+            await _deepAgentEvents.PublishAsync(
+                domain: "natureos",
+                task: $"NatureOS workflow saved: {workflow.Name}",
+                context: new { route = "/api/Workflow", workflowId = saved.Id, workflowName = saved.Name },
+                preferredAgent: "ops-agent",
+                cancellationToken: cancellationToken);
             return Ok(saved);
         }
         catch (Exception ex)
@@ -106,6 +129,12 @@ public class WorkflowController : ControllerBase
         try
         {
             var result = await _workflowService.ExecuteWorkflowAsync(workflowId, parameters, cancellationToken);
+            await _deepAgentEvents.PublishAsync(
+                domain: "natureos",
+                task: $"NatureOS workflow executed: {workflowId}",
+                context: new { route = "/api/Workflow/{workflowId}/execute", workflowId },
+                preferredAgent: "ops-agent",
+                cancellationToken: cancellationToken);
             return Ok(result);
         }
         catch (Exception ex)
@@ -129,6 +158,12 @@ public class WorkflowController : ControllerBase
         try
         {
             var history = await _workflowService.GetExecutionHistoryAsync(workflowId, limit, cancellationToken);
+            await _deepAgentEvents.PublishAsync(
+                domain: "natureos",
+                task: "NatureOS workflow history requested",
+                context: new { route = "/api/Workflow/history", workflowId, limit },
+                preferredAgent: "ops-agent",
+                cancellationToken: cancellationToken);
             return Ok(history);
         }
         catch (Exception ex)

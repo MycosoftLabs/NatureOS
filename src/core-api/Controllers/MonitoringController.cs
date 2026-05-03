@@ -12,11 +12,16 @@ namespace NatureOS.CoreApi.Controllers;
 public class MonitoringController : ControllerBase
 {
     private readonly IMonitoringService _monitoringService;
+    private readonly DeepAgentEventService _deepAgentEvents;
     private readonly ILogger<MonitoringController> _logger;
 
-    public MonitoringController(IMonitoringService monitoringService, ILogger<MonitoringController> logger)
+    public MonitoringController(
+        IMonitoringService monitoringService,
+        DeepAgentEventService deepAgentEvents,
+        ILogger<MonitoringController> logger)
     {
         _monitoringService = monitoringService;
+        _deepAgentEvents = deepAgentEvents;
         _logger = logger;
     }
 
@@ -31,6 +36,12 @@ public class MonitoringController : ControllerBase
         try
         {
             var metrics = await _monitoringService.GetSystemMetricsAsync(cancellationToken);
+            await _deepAgentEvents.PublishAsync(
+                domain: "natureos",
+                task: "NatureOS monitoring metrics requested",
+                context: new { route = "/api/Monitoring/metrics" },
+                preferredAgent: "ops-agent",
+                cancellationToken: cancellationToken);
             return Ok(metrics);
         }
         catch (Exception ex)
@@ -53,6 +64,12 @@ public class MonitoringController : ControllerBase
         try
         {
             var alerts = await _monitoringService.GetAlertsAsync(limit, cancellationToken);
+            await _deepAgentEvents.PublishAsync(
+                domain: "security",
+                task: "NatureOS monitoring alerts requested",
+                context: new { route = "/api/Monitoring/alerts", limit },
+                preferredAgent: "security-agent",
+                cancellationToken: cancellationToken);
             return Ok(alerts);
         }
         catch (Exception ex)
@@ -73,6 +90,12 @@ public class MonitoringController : ControllerBase
         try
         {
             var status = await _monitoringService.GetHealthStatusAsync(cancellationToken);
+            await _deepAgentEvents.PublishAsync(
+                domain: "natureos",
+                task: "NatureOS health status requested",
+                context: new { route = "/api/Monitoring/health" },
+                preferredAgent: "ops-agent",
+                cancellationToken: cancellationToken);
             return Ok(status);
         }
         catch (Exception ex)
@@ -93,6 +116,12 @@ public class MonitoringController : ControllerBase
         try
         {
             var summary = await _monitoringService.GetDeviceHealthAsync(cancellationToken);
+            await _deepAgentEvents.PublishAsync(
+                domain: "device",
+                task: "NatureOS device health requested",
+                context: new { route = "/api/Monitoring/devices" },
+                preferredAgent: "ops-agent",
+                cancellationToken: cancellationToken);
             return Ok(summary);
         }
         catch (Exception ex)

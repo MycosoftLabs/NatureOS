@@ -87,8 +87,16 @@ public class MycoBrainService : IMycoBrainService
         if (!valid)
             return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, Message = "Invalid MDP frame" };
 
-        if (type != MDPv1Protocol.MessageType.Telemetry)
+        if (type != MDPv1Protocol.MessageType.Telemetry &&
+            type != MDPv1Protocol.MessageType.AcousticRaw &&
+            type != MDPv1Protocol.MessageType.AcousticFingerprint &&
+            type != MDPv1Protocol.MessageType.MagneticAnomaly &&
+            type != MDPv1Protocol.MessageType.OceanEnvironment &&
+            type != MDPv1Protocol.MessageType.TacticalAssessment &&
+            type != MDPv1Protocol.MessageType.MaritimeRelay)
+        {
             return new ProcessingResult { Success = true, Timestamp = DateTime.UtcNow, Message = $"Ignored {type}" };
+        }
 
         var json = Encoding.UTF8.GetString(payload);
         try

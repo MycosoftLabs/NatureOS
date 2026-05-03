@@ -10,11 +10,16 @@ namespace NatureOS.CoreApi.Controllers;
 public class MycoBrainController : ControllerBase
 {
     private readonly IMycoBrainService _service;
+    private readonly DeepAgentEventService _deepAgentEvents;
     private readonly ILogger<MycoBrainController> _logger;
 
-    public MycoBrainController(IMycoBrainService service, ILogger<MycoBrainController> logger)
+    public MycoBrainController(
+        IMycoBrainService service,
+        DeepAgentEventService deepAgentEvents,
+        ILogger<MycoBrainController> logger)
     {
         _service = service;
+        _deepAgentEvents = deepAgentEvents;
         _logger = logger;
     }
 
@@ -22,6 +27,12 @@ public class MycoBrainController : ControllerBase
     public async Task<IActionResult> Telemetry([FromBody] MycoBrainTelemetry telemetry, CancellationToken ct)
     {
         var result = await _service.ProcessTelemetryAsync(telemetry, ct);
+        await _deepAgentEvents.PublishAsync(
+            domain: "device",
+            task: $"NatureOS telemetry processed for {telemetry.SerialNumber}",
+            context: new { route = "/api/mycobrain/telemetry", serial = telemetry.SerialNumber },
+            preferredAgent: "ops-agent",
+            cancellationToken: ct);
         return Ok(result);
     }
 
@@ -50,6 +61,15 @@ public class MycoBrainController : ControllerBase
     public async Task<IActionResult> SendCommand([FromBody] MycoBrainCommand command, CancellationToken ct)
     {
         var ok = await _service.SendCommandAsync(command, ct);
+        if (ok)
+        {
+            await _deepAgentEvents.PublishAsync(
+                domain: "device",
+                task: $"NatureOS MycoBrain command sent: {command.CommandId}",
+                context: new { route = "/api/mycobrain/command", target = command.TargetSerial, sequence = command.SequenceNumber },
+                preferredAgent: "ops-agent",
+                cancellationToken: ct);
+        }
         return ok ? Ok(new { status = "sent" }) : StatusCode(500, new { error = "send_failed" });
     }
 
@@ -57,6 +77,12 @@ public class MycoBrainController : ControllerBase
     public async Task<IActionResult> Register([FromBody] MycoBrainDevice device, CancellationToken ct)
     {
         var saved = await _service.RegisterDeviceAsync(device, ct);
+        await _deepAgentEvents.PublishAsync(
+            domain: "device",
+            task: $"NatureOS MycoBrain device registered: {device.DeviceId}",
+            context: new { route = "/api/mycobrain/devices/register", deviceId = device.DeviceId, deviceType = device.DeviceType },
+            preferredAgent: "ops-agent",
+            cancellationToken: ct);
         return Ok(saved);
     }
 

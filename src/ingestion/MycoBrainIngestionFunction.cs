@@ -57,7 +57,13 @@ public class MycoBrainIngestionFunction
             return;
         }
 
-        if (type != MDPv1Protocol.MessageType.Telemetry)
+        if (type != MDPv1Protocol.MessageType.Telemetry &&
+            type != MDPv1Protocol.MessageType.AcousticRaw &&
+            type != MDPv1Protocol.MessageType.AcousticFingerprint &&
+            type != MDPv1Protocol.MessageType.MagneticAnomaly &&
+            type != MDPv1Protocol.MessageType.OceanEnvironment &&
+            type != MDPv1Protocol.MessageType.TacticalAssessment &&
+            type != MDPv1Protocol.MessageType.MaritimeRelay)
             return;
 
         var json = Encoding.UTF8.GetString(payload);
