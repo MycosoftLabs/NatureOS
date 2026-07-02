@@ -102,7 +102,7 @@ public class WorkflowController : ControllerBase
             await _deepAgentEvents.PublishAsync(
                 domain: "natureos",
                 task: $"NatureOS workflow saved: {workflow.Name}",
-                context: new { route = "/api/Workflow", workflowId = saved.Id, workflowName = saved.Name },
+                context: new { route = "/api/Workflow", workflowId = saved.WorkflowId, workflowName = saved.Name },
                 preferredAgent: "ops-agent",
                 cancellationToken: cancellationToken);
             return Ok(saved);
