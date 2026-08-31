@@ -1,91 +1,108 @@
-﻿# NatureOS - Earth Systems Simulation Platform
+﻿# NatureOS Core API
 
-> **Version**: 2.0.0  
-> **Last Updated**: 2026-01-15T14:30:00Z
+> **.NET 8 backend** for the NatureOS Earth-systems platform  
+> **Deployed to**: Azure App Service `natureos-api-prod001`  
+> **Repo**: `MycosoftLabs/NatureOS`
 
-## Overview
+## What this repo contains
 
-NatureOS is Mycosoft's comprehensive Earth systems simulation platform that provides:
+| Directory | Content |
+|-----------|---------|
+| `src/core-api/` | ASP.NET Core 8 Web API — controllers, services, SignalR hub |
+| `src/mindex/` | MINDEX model library (`MycorrhizaeEvent`, `MycoBrainModels`, taxonomy types) |
+| `src/mycorrhizae/` | MDPv1 binary protocol codec |
+| `src/ingestion/` | Azure Functions v4 workers (event, MycoBrain, MAS ingestion) |
+| `tests/NatureOS.Tests/` | xUnit unit tests (run in CI) |
+| `src/dashboard/` | Next.js dashboard (has its own `package.json`) |
+| `matlab/` / `simulink/` | MATLAB analysis scripts and Simulink models |
+| `sensor-bme680/` / `sensor-i2c-scan/` / `uplink-t-sim7000g/` | PlatformIO firmware for field sensors |
+| `infrastructure/` | Azure Bicep IaC (`main.bicep`) |
+| `docker/` / `Dockerfile` / `docker-compose.yml` | Local dev stack (API, CosmosDB emulator, Redis, Grafana) |
 
-- **Live Map** - Real-time global environmental monitoring
-- **Earth Simulator** - Physics-based environmental simulation
-- **AI Studio** - Machine learning model training
-- **Monitoring** - System health and metrics
-- **Workflows** - Automated data processing pipelines
+## Solution structure (`NatureOS.sln`)
 
-## 🌍 Features
-
-### Live Map
-Real-time visualization of:
-- Weather patterns
-- Seismic activity
-- Air quality
-- Species observations
-- Satellite imagery
-
-### Earth Simulator
-Physics-based simulations:
-- Weather systems
-- Geospatial data
-- Magnetic fields
-- Tectonic activity
-- Biological interactions
-- Chemical processes
-
-### Data Sources
-- NOAA Weather
-- USGS Earthquakes
-- NASA EONET
-- CelesTrak Satellites
-- OpenSky Aircraft
-- AISstream Vessels
-
-## 🔗 Website Integration
-
-NatureOS is accessible via the Mycosoft Website at:
-- `/natureos` - Main dashboard
-- `/natureos/live-map` - Real-time map
-- `/natureos/monitoring` - System metrics
-- `/natureos/mindex` - MINDEX integration
-
-## 📡 API Endpoints
-
-| Endpoint | Description |
-|----------|-------------|
-| `/api/natureos/global-events` | Aggregated global events |
-| `/api/natureos/weather` | Weather data |
-| `/api/earth-simulator/*` | Simulation endpoints |
-
-## 🔧 Configuration
-
-NatureOS Core API is a standalone .NET 8 service deployed to Azure.
-The Mycosoft Website (separate repo) integrates with NatureOS via its REST and SignalR APIs.
-
-Required environment variables:
-```env
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=...
-NASA_API_KEY=...
-NOAA_API_KEY=...
+```
+NatureOS.CoreApi        → src/core-api/NatureOS.CoreApi.csproj
+NatureOS.MINDEX         → src/mindex/NatureOS.MINDEX.csproj
+NatureOS.Mycorrhizae    → src/mycorrhizae/NatureOS.Mycorrhizae.csproj
+NatureOS.Ingestion      → src/ingestion/NatureOS.Ingestion.csproj
+NatureOS.Tests          → tests/NatureOS.Tests/NatureOS.Tests.csproj
 ```
 
-## 📚 Documentation
+## Quick start
 
-- System Architecture — see [MycosoftLabs/website](https://github.com/MycosoftLabs/website) repo (`docs/SYSTEM_ARCHITECTURE.md`)
+```bash
+# Restore and build
+dotnet restore NatureOS.sln
+dotnet build NatureOS.sln --configuration Release
+
+# Run tests
+dotnet test tests/NatureOS.Tests/
+
+# Run locally (requires Azure config — see .env.example)
+dotnet run --project src/core-api/
+```
+
+Or with Docker:
+
+```bash
+docker compose up -d natureos-api cosmos-emulator redis
+```
+
+The API listens on port **8080** and exposes `/health`, `/version`, and `/api/status`.
+
+## Key API routes
+
+| Route | Purpose |
+|-------|---------|
+| `GET /health` | ASP.NET health-check (Cosmos, SignalR) |
+| `GET /api/status` | Lightweight version/feature probe |
+| `GET /api/mycosoft/status` | Full system status (devices, events, MAS health) |
+| `POST /api/mycosoft/myca/query` | MYCA AI query (live when `MYCA_API_URL` is set, synthetic fallback otherwise) |
+| `GET /api/mycosoft/website/dashboard` | Dashboard payload for website integration |
+| `GET /api/mycosoft/events/stream` | SSE real-time event stream |
+| `POST /api/mycobrain/telemetry` | MycoBrain device telemetry ingestion |
+| `PUT /devices/{id}/config` | MAS-compatible device config update (upserts if not registered) |
+| `WS /natureos-hub` | SignalR hub for real-time push |
+
+## Configuration
+
+Copy `.env.example` to `.env` (never commit `.env`).
+
+Required secrets for production are documented in `docs/key-vault-configuration.md`
+and `docs/github-secrets-setup.md`. Key variables:
+
+| Variable | Purpose |
+|----------|---------|
+| `MINDEX_API_URL` | MINDEX service base URL |
+| `MINDEX_API_KEY` | MINDEX API key |
+| `MYCA_API_URL` | Live MYCA backend (omit for synthetic fallback) |
+| `CORS_ORIGINS` | Comma-separated allowed origins |
+
+## CI / CD
+
+`.github/workflows/deploy-production.yml` runs on push/PR to `main`:
+
+1. `dotnet restore` → full solution
+2. `dotnet build` → all projects
+3. `dotnet test` → `tests/NatureOS.Tests/`
+4. `dotnet publish` → Core API artifact
+5. Deploy to Azure App Service `natureos-api-prod001` (main branch only)
+
+## Relationship to other repos
+
+- **`MycosoftLabs/website`** — the Mycosoft Website (Next.js). NatureOS is consumed via REST/SignalR; the website owns the frontend, system architecture docs, and Fusarium digital-twin UI.
+- **MINDEX / MAS** — NatureOS projects events into MINDEX and MAS containers in Azure Cosmos DB. MAS orchestration lives outside this repo.
+- **Fusarium** — the two `/api/mycosoft/fusarium/*` endpoints in this repo are thin proxies over the standard dashboard data. All Fusarium-specific logic (digital twin, environmental modelling) lives in the website + MINDEX + MAS ecosystem, not here.
+
+## Documentation
+
 - [Mycosoft Integration](./docs/mycosoft-integration.md)
 - [MycoBrain Integration](./docs/mycobrain-integration.md)
 - [Frontend Integration Guide](./docs/frontend-integration-guide.md)
+- [Key Vault Configuration](./docs/key-vault-configuration.md)
+- [GitHub Secrets Setup](./docs/github-secrets-setup.md)
 
-## 📝 Changelog
+## License
 
-### 2026-01-15
-- Integrated with CREP dashboard
-- Added real-time event streaming
-- Enhanced data collector redundancy
-- Added containerized data collectors (aviation, maritime, satellite)
-- Implemented geocoding pipeline for MINDEX observations
-- Added Carbon Mapper and OpenRailwayMap integrations
-- Enhanced trajectory visualization with animated paths
-
-## 📜 License
-
-Copyright © 2026 Mycosoft. All rights reserved.
+Copyright © 2026 Mycosoft. All rights reserved. See [LICENSE](./LICENSE).
