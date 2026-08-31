@@ -415,10 +415,13 @@ Please provide a helpful response that considers the current system state and da
             var systemContext = await GetSystemContext();
             var deviceStats = await _deviceService.GetDeviceStatisticsAsync();
             var eventStats = await _eventService.GetEventStatisticsAsync(new Services.EventQuery());
+            var masHealth = await _masIngestionService.CheckHealthAsync();
+
+            var overall = masHealth.Healthy ? "Healthy" : "Degraded";
 
             var status = new
             {
-                Overall = "Healthy",
+                Overall = overall,
                 Timestamp = DateTime.UtcNow,
                 Services = systemContext,
                 Devices = deviceStats,
@@ -426,7 +429,8 @@ Please provide a helpful response that considers the current system state and da
                 Integrations = new
                 {
                     Website = "Unknown",
-                    MAS = "Unknown",
+                    MAS = masHealth.Status,
+                    MASDetail = masHealth.Detail,
                     ExternalDatabases = "Unknown"
                 }
             };
@@ -447,6 +451,8 @@ Please provide a helpful response that considers the current system state and da
         var deviceStats = await _deviceService.GetDeviceStatisticsAsync();
         var eventStats = await _eventService.GetEventStatisticsAsync(new Services.EventQuery());
 
+        var topSpecies = await DeriveTopSpeciesAsync();
+
         return new
         {
             ActiveDevices = deviceStats.ActiveDevices,
@@ -454,9 +460,38 @@ Please provide a helpful response that considers the current system state and da
             EventsToday = eventStats.TodayCount,
             EventsPerHour = eventStats.AveragePerHour,
             SystemHealth = CalculateSystemHealth(deviceStats, eventStats),
-            TopSpecies = Array.Empty<string>(),
+            TopSpecies = topSpecies,
             AverageEventsPerDay = eventStats.AveragePerDay
         };
+    }
+
+    private async Task<string[]> DeriveTopSpeciesAsync()
+    {
+        try
+        {
+            var recentEvents = await _eventService.GetEventsByTimeRangeAsync(
+                DateTime.UtcNow.AddDays(-7), DateTime.UtcNow, limit: 500);
+
+            var speciesCounts = recentEvents
+                .Select(e =>
+                    e.References?.Taxonomy?.Species
+                    ?? e.References?.Taxonomy?.ScientificName
+                    ?? null)
+                .Where(s => !string.IsNullOrWhiteSpace(s) &&
+                            !string.Equals(s, "unknown", StringComparison.OrdinalIgnoreCase))
+                .GroupBy(s => s!, StringComparer.OrdinalIgnoreCase)
+                .OrderByDescending(g => g.Count())
+                .Take(10)
+                .Select(g => g.Key)
+                .ToArray();
+
+            return speciesCounts;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Failed to derive TopSpecies from taxonomy fields");
+            return Array.Empty<string>();
+        }
     }
 
     private async Task<string[]> GenerateSuggestedQuestions(string originalQuery, object systemContext)

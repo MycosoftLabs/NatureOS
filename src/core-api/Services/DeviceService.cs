@@ -101,26 +101,21 @@ public class DeviceService : IDeviceService
     {
         try
         {
-            // Update timestamp
             device.UpdatedAt = DateTime.UtcNow;
+            if (device.CreatedAt == default)
+                device.CreatedAt = DateTime.UtcNow;
 
-            var response = await _devicesContainer.ReplaceItemAsync(
+            var response = await _devicesContainer.UpsertItemAsync(
                 device,
-                device.DeviceId,
                 new PartitionKey(device.DeviceId),
                 cancellationToken: cancellationToken);
 
-            _logger.LogInformation("Updated device {DeviceId}", device.DeviceId);
+            _logger.LogInformation("Upserted device {DeviceId}", device.DeviceId);
             return response.Resource;
-        }
-        catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
-        {
-            _logger.LogWarning("Device {DeviceId} not found for update", device.DeviceId);
-            throw new InvalidOperationException($"Device {device.DeviceId} not found", ex);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to update device {DeviceId}", device.DeviceId);
+            _logger.LogError(ex, "Failed to upsert device {DeviceId}", device.DeviceId);
             throw;
         }
     }

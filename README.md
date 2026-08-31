@@ -58,7 +58,8 @@ NatureOS is accessible via the Mycosoft Website at:
 
 ## 🔧 Configuration
 
-NatureOS runs as part of the Mycosoft Website (port 3000).
+NatureOS Core API is a standalone .NET 8 service deployed to Azure.
+The Mycosoft Website (separate repo) integrates with NatureOS via its REST and SignalR APIs.
 
 Required environment variables:
 ```env
@@ -69,8 +70,10 @@ NOAA_API_KEY=...
 
 ## 📚 Documentation
 
-- [System Architecture](../../WEBSITE/website/docs/SYSTEM_ARCHITECTURE.md)
-- [Integration Guide](./docs/INTEGRATION_GUIDE.md)
+- System Architecture — see [MycosoftLabs/website](https://github.com/MycosoftLabs/website) repo (`docs/SYSTEM_ARCHITECTURE.md`)
+- [Mycosoft Integration](./docs/mycosoft-integration.md)
+- [MycoBrain Integration](./docs/mycobrain-integration.md)
+- [Frontend Integration Guide](./docs/frontend-integration-guide.md)
 
 ## 📝 Changelog
 
