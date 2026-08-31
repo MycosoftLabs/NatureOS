@@ -16,4 +16,16 @@ public interface IMasIngestionService
     /// Ingest arbitrary context (website actions, analytics, user signals) for MAS learning
     /// </summary>
     Task<bool> IngestContextAsync(object contextPayload, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Read-only health check: verify MAS containers are accessible without writing data.
+    /// </summary>
+    Task<MasHealthResult> CheckHealthAsync(CancellationToken cancellationToken = default);
+}
+
+public sealed class MasHealthResult
+{
+    public bool Healthy { get; init; }
+    public string Status { get; init; } = "Unknown";
+    public string? Detail { get; init; }
 }
