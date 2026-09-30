@@ -42,7 +42,7 @@ public class WorkflowService : IWorkflowService
     {
         // Definitions can be stored, but no executor is bound to this service.
         // Do not invent an execution or completed history for an unsupported request.
-        _logger.LogWarning("Workflow execution unavailable for {WorkflowId}: no executor configured", workflowId);
+        _logger.LogWarning("Workflow execution unavailable: no executor configured");
         return Task.FromResult(new WorkflowExecutionResult
         {
             Success = false,

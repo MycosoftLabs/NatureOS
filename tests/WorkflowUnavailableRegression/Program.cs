@@ -24,6 +24,8 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Controller publishes no event for unsupported unknown workflow", UnknownNoEvent),
     ("Definition CRUD still works within one service instance", DefinitionCrud),
     ("Repeated unsupported attempts never manufacture history", RepeatedAttempts),
+    ("Unavailable warning excludes user-controlled log separators", NoUserControlledLogMessage),
+    ("Unavailable warning excludes request data from structured state", NoUserControlledLogState),
 };
 
 var failed = 0;
@@ -158,6 +160,56 @@ static async Task RepeatedAttempts()
         await service.ExecuteWorkflowAsync(definition.WorkflowId);
     Check(!(await service.GetExecutionHistoryAsync(definition.WorkflowId)).Any(),
         "Repeated unavailable requests must never fabricate completed history");
+}
+
+static async Task NoUserControlledLogMessage()
+{
+    var logger = new RecordingLogger<WorkflowService>();
+    var service = new WorkflowService(logger);
+    var id = "untrusted-workflow\r\nforged-record\u001b[31m\u2028\u2029";
+    var result = await service.ExecuteWorkflowAsync(id);
+    Check(!result.Success && result.CompletedAt is null,
+        "Unsafe identifier must not change the unsupported execution result");
+    Check(logger.Entries.Count == 1 && logger.Entries[0].Level == LogLevel.Warning,
+        "Unavailable execution must still emit one useful warning");
+    var message = logger.Entries[0].Message;
+    Check(message.Contains("unavailable", StringComparison.OrdinalIgnoreCase),
+        "Warning must retain the operational reason");
+    Check(!message.Contains(id, StringComparison.Ordinal)
+          && message.IndexOfAny(new[] { '\r', '\n', '\u001b', '\u2028', '\u2029' }) < 0,
+        "User-controlled workflow ID or log separators leaked into the rendered warning");
+}
+
+static async Task NoUserControlledLogState()
+{
+    const string id = "private-workflow-fixture";
+    const string parameter = "private-parameter-fixture";
+    var logger = new RecordingLogger<WorkflowService>();
+    await new WorkflowService(logger).ExecuteWorkflowAsync(id,
+        new Dictionary<string, object> { ["fixture"] = parameter });
+    Check(logger.Entries.Count == 1, "Expected one warning");
+    var entry = logger.Entries[0];
+    Check(!entry.Message.Contains(id, StringComparison.Ordinal)
+          && !entry.Message.Contains(parameter, StringComparison.Ordinal),
+        "Request data leaked into the warning text");
+    var state = entry.State as IEnumerable<KeyValuePair<string, object?>>
+        ?? throw new InvalidOperationException("Expected structured logger state");
+    var fields = state.ToArray();
+    Check(fields.Length == 1
+          && fields[0].Key == "{OriginalFormat}"
+          && fields[0].Value is string format
+          && string.Equals(format, entry.Message, StringComparison.Ordinal),
+        "Warning state must contain only its fixed message template, with no request fields or nested values");
+}
+
+sealed class RecordingLogger<T> : ILogger<T>
+{
+    public List<(LogLevel Level, string Message, object? State)> Entries { get; } = new();
+    public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+    public bool IsEnabled(LogLevel logLevel) => true;
+    public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+        Exception? exception, Func<TState, Exception?, string> formatter)
+        => Entries.Add((logLevel, formatter(state, exception), state));
 }
 
 sealed class RecordingFactory : IHttpClientFactory
