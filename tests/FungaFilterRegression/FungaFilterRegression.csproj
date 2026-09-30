@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Reference Include="Newtonsoft.Json"><HintPath>$(NewtonsoftJsonAssembly)</HintPath></Reference>
+    <Compile Include="../../src/core-api/Services/FungaService.cs" Link="Source/FungaService.cs" />
+    <Compile Include="../../src/core-api/Services/IFungaService.cs" Link="Source/IFungaService.cs" />
+    <Compile Include="../../src/core-api/Services/IEventService.cs" Link="Source/IEventService.cs" />
+    <Compile Include="../../src/core-api/Services/FungaEventReader.cs" Link="Source/FungaEventReader.cs" Condition="Exists('../../src/core-api/Services/FungaEventReader.cs')" />
+    <Compile Include="../../src/core-api/Controllers/FungaController.cs" Link="Source/FungaController.cs" />
+    <Compile Include="../../src/mindex/Models/MycorrhizaeEvent.cs" Link="Source/MycorrhizaeEvent.cs" />
+  </ItemGroup>
+</Project>

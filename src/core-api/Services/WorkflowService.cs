@@ -40,24 +40,14 @@ public class WorkflowService : IWorkflowService
 
     public Task<WorkflowExecutionResult> ExecuteWorkflowAsync(string workflowId, Dictionary<string, object>? parameters = null, CancellationToken cancellationToken = default)
     {
-        var execId = $"exec-{Guid.NewGuid():N}"[..16];
-        lock (_lock)
-        {
-            _executions.Add(new WorkflowExecution
-            {
-                ExecutionId = execId,
-                WorkflowId = workflowId,
-                Status = "Completed",
-                StartedAt = DateTime.UtcNow,
-                CompletedAt = DateTime.UtcNow
-            });
-        }
+        // Definitions can be stored, but no executor is bound to this service.
+        // Do not invent an execution or completed history for an unsupported request.
+        _logger.LogWarning("Workflow execution unavailable for {WorkflowId}: no executor configured", workflowId);
         return Task.FromResult(new WorkflowExecutionResult
         {
-            ExecutionId = execId,
-            Success = true,
-            Message = "Workflow executed (stub)",
-            CompletedAt = DateTime.UtcNow
+            Success = false,
+            Message = "Workflow execution is unavailable: no executor is configured.",
+            CompletedAt = null
         });
     }
 
