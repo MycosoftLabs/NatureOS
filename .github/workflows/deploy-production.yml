@@ -1,13 +1,13 @@
-name: Deploy to Production
+name: Validate and Package NatureOS
 
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
 
 permissions:
-  id-token: write
   contents: read
 
 env:
@@ -42,50 +42,6 @@ jobs:
         name: natureos-app
         path: ./publish
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    environment: production
-    
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: natureos-app
-        path: ./publish
-    
-    - name: Azure Login
-      uses: azure/login@v2
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
-    
-    - name: Deploy to Azure Web App
-      uses: azure/webapps-deploy@v3
-      with:
-        app-name: 'natureos-api-prod001'
-        slot-name: 'production'
-        package: ./publish
-    
-    - name: Azure logout
-      run: |
-        az logout
-        az cache purge
-        az account clear
 
-  agentic-fallback:
-    needs: [build, deploy]
-    if: always() && contains(needs.*.result, 'failure')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Trigger Agentic Auto-Fix
-        run: |
-          echo "Build failed. Triggering Mycosoft Antigravity Agent for autonomous resolution..."
-          if [ -n "${{ secrets.AGENT_API_KEY }}" ]; then
-            curl -X POST -H "Content-Type: application/json" -H "Authorization: Bearer ${{ secrets.AGENT_API_KEY }}" \
-                 -d "{\"repo\": \"${{ github.repository }}\", \"run_id\": \"${{ github.run_id }}\"}" \
-                 https://api.mycosoft.com/agent/auto-fix || echo "Fallback triggered."
-          else
-            echo "Agentic hook called, awaiting implementation."
-          fi
+  # Deployment is separate from CI and requires a reviewed operator handoff.
+  # This workflow never logs into Azure or invokes production auto-fix endpoints.
