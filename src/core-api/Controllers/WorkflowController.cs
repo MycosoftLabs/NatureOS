@@ -119,6 +119,7 @@ public class WorkflowController : ControllerBase
     /// </summary>
     [HttpPost("{workflowId}/execute")]
     [ProducesResponseType(typeof(WorkflowExecutionResult), 200)]
+    [ProducesResponseType(typeof(WorkflowExecutionResult), 501)]
     [ProducesResponseType(404)]
     [ProducesResponseType(500)]
     public async Task<ActionResult<WorkflowExecutionResult>> ExecuteWorkflow(
@@ -129,6 +130,9 @@ public class WorkflowController : ControllerBase
         try
         {
             var result = await _workflowService.ExecuteWorkflowAsync(workflowId, parameters, cancellationToken);
+            if (!result.Success)
+                return StatusCode(501, result);
+
             await _deepAgentEvents.PublishAsync(
                 domain: "natureos",
                 task: $"NatureOS workflow executed: {workflowId}",
