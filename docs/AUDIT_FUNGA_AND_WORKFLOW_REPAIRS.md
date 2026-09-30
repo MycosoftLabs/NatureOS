@@ -36,4 +36,6 @@ The unavailable-executor warning previously included the caller's workflow ID in
 
 Two additional offline cases capture the actual service's `ILogger` output. They cover carriage return, newline, escape and Unicode line separators, and verify that neither the rendered warning nor structured fields contain request data. Against main `c944b4fa281c07030d3004bf0dd340519d705017`, the existing 10 cases passed and these two failed; after the one-line service change, all 12 workflow cases pass. Run the same workflow commands above to reproduce. The Funga suite was not rerun for this logging-only follow-up, and no live collector or application deployment was exercised. Closure of CodeQL alert 61 requires a new repository scan; local regression tests are not a CodeQL scan.
 
+The structured-state assertion permits only the logger's single string `{OriginalFormat}` field, equal to the rendered fixed message. Additional fields and nested objects or collections therefore fail the regression, including request data that a top-level `ToString()` comparison would miss.
+
 Rollback this follow-up by reverting only its logging, fixture and documentation changes. That restores the unsafe user-controlled warning content and should not be used as a mitigation; it does not change workflow availability or stored data.

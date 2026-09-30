@@ -194,10 +194,12 @@ static async Task NoUserControlledLogState()
         "Request data leaked into the warning text");
     var state = entry.State as IEnumerable<KeyValuePair<string, object?>>
         ?? throw new InvalidOperationException("Expected structured logger state");
-    Check(state.All(item => item.Key != "WorkflowId"
-          && !string.Equals(item.Value?.ToString(), id, StringComparison.Ordinal)
-          && !string.Equals(item.Value?.ToString(), parameter, StringComparison.Ordinal)),
-        "Request data leaked into structured log fields");
+    var fields = state.ToArray();
+    Check(fields.Length == 1
+          && fields[0].Key == "{OriginalFormat}"
+          && fields[0].Value is string format
+          && string.Equals(format, entry.Message, StringComparison.Ordinal),
+        "Warning state must contain only its fixed message template, with no request fields or nested values");
 }
 
 sealed class RecordingLogger<T> : ILogger<T>
