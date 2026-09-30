@@ -29,3 +29,11 @@ Funga reproduction is in the linked guide and additionally requires the declared
 Before deployment, execute the three Funga queries against a disposable Cosmos dataset produced by the actual writers, inspect required ordering indexes and measure request units. Verify real authenticated consumers preserve 400/501/503, nullable completion time and unknown/unavailable data states. Preserve the previous application image and current configuration for rollback; no data migration is included.
 
 Rollback by reverting these release commits or returning to the previous verified image, preserving unrelated workflow/operator changes. New Funga cursors require a query restart if the old reader is restored. Reverting workflow code restores the misleading success behavior; it does not recover real executions. Do not treat keeping an old image as proof of a tested failover.
+
+## Workflow warning log safety follow-up
+
+The unavailable-executor warning previously included the caller's workflow ID in both rendered text and structured logger state. A workflow ID containing line separators could create misleading log records. The warning now contains only a fixed operational message; workflow IDs and request parameters are omitted. Unsupported execution still returns HTTP 501 with no execution, completion timestamp, event or history.
+
+Two additional offline cases capture the actual service's `ILogger` output. They cover carriage return, newline, escape and Unicode line separators, and verify that neither the rendered warning nor structured fields contain request data. Against main `c944b4fa281c07030d3004bf0dd340519d705017`, the existing 10 cases passed and these two failed; after the one-line service change, all 12 workflow cases pass. Run the same workflow commands above to reproduce. The Funga suite was not rerun for this logging-only follow-up, and no live collector or application deployment was exercised. Closure of CodeQL alert 61 requires a new repository scan; local regression tests are not a CodeQL scan.
+
+Rollback this follow-up by reverting only its logging, fixture and documentation changes. That restores the unsafe user-controlled warning content and should not be used as a mitigation; it does not change workflow availability or stored data.
