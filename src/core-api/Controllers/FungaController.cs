@@ -44,6 +44,7 @@ public class FungaController : ControllerBase
     [HttpGet("events")]
     [ProducesResponseType(typeof(PagedResult<MycorrhizaeEvent>), 200)]
     [ProducesResponseType(400)]
+    [ProducesResponseType(503)]
     [ProducesResponseType(500)]
     public async Task<ActionResult<PagedResult<MycorrhizaeEvent>>> GetFungaEvents(
         [FromQuery] string? sourceDevice = null,
@@ -115,6 +116,15 @@ public class FungaController : ControllerBase
 
             var result = await _fungaService.GetFungaEventsAsync(query, cancellationToken);
             return Ok(result);
+        }
+        catch (FungaQueryValidationException ex)
+        {
+            return BadRequest(new { code = "invalid_funga_query", message = ex.Message });
+        }
+        catch (FungaDocumentSchemaException ex)
+        {
+            _logger.LogError(ex, "FUNGA event data could not be read consistently");
+            return StatusCode(503, new { code = "funga_data_unavailable", message = "Event data could not be read consistently" });
         }
         catch (Exception ex)
         {

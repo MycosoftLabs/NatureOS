@@ -84,6 +84,22 @@ public class FungaQuery : EventQuery
     /// Include only mycorrhizal fungi
     /// </summary>
     public bool? MycorrhizalOnly { get; set; }
+
+    /// <summary>Validate before building SQL or opening any provider iterator.</summary>
+    public void ValidateEnvironmentalRanges()
+    {
+        if (PageSize < 1 || PageSize > 1000)
+            throw new FungaQueryValidationException("Page size must be between 1 and 1000");
+        if (TemperatureRange != null) ValidateRange(TemperatureRange.Min, TemperatureRange.Max, "temperature");
+        if (HumidityRange != null) ValidateRange(HumidityRange.Min, HumidityRange.Max, "humidity");
+        if (pHRange != null) ValidateRange(pHRange.Min, pHRange.Max, "pH");
+    }
+
+    private static void ValidateRange(double min, double max, string name)
+    {
+        if (!double.IsFinite(min) || !double.IsFinite(max) || min > max)
+            throw new FungaQueryValidationException($"{name} bounds must be finite and minimum must not exceed maximum");
+    }
 }
 
 /// <summary>
@@ -434,4 +450,9 @@ public class pHRange
 {
     public double Min { get; set; }
     public double Max { get; set; }
-} 
+}
+/// <summary>Invalid bounds or an incompatible continuation envelope.</summary>
+public sealed class FungaQueryValidationException(string message) : ArgumentException(message);
+
+/// <summary>A returned document or bounded provider page cannot be read reliably.</summary>
+public sealed class FungaDocumentSchemaException(string message) : Exception(message);

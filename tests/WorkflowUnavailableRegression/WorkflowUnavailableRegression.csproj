@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <Compile Include="../../src/core-api/Services/WorkflowService.cs" Link="Source/WorkflowService.cs" />
+    <Compile Include="../../src/core-api/Services/IWorkflowService.cs" Link="Source/IWorkflowService.cs" />
+    <Compile Include="../../src/core-api/Controllers/WorkflowController.cs" Link="Source/WorkflowController.cs" />
+    <Compile Include="../../src/core-api/Services/DeepAgentEventService.cs" Link="Source/DeepAgentEventService.cs" />
+  </ItemGroup>
+</Project>

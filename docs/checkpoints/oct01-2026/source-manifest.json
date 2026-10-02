@@ -1,0 +1,115 @@
+{
+  "status": "WIP",
+  "deployment": false,
+  "repository": "C:\\Users\\Owner1\\.codex\\worktrees\\system-audit-repairs\\CODE\\natureos-workflow-repair",
+  "sourceBranch": "codex/natureos-workflow-audit",
+  "checkpointBranch": "codex/checkpoint-natureos-workflow-repair-oct01-2026",
+  "currentBase": "71cf31f58d5c1954e5dc2d6c86709dc584693161",
+  "scope": {
+    "sourceDeltaCount": 15,
+    "sourceDelta": [
+      {
+        "path": "docs/BATCH8_FUNGA_FILTER_COMPATIBILITY_SEP30_2026.md",
+        "operation": "write",
+        "bytes": 7588,
+        "sha256": "b8cd1d19c2f5aa46d15106f732145e25cb931a042db6c2da612e161a67131c5b"
+      },
+      {
+        "path": "src/core-api/Controllers/FungaController.cs",
+        "operation": "write",
+        "bytes": 19939,
+        "sha256": "42a6bbf3b9b954b7d5c9989067ef5e7ecbdd0e7064216cf780f90e4112df4e45"
+      },
+      {
+        "path": "src/core-api/Controllers/WorkflowController.cs",
+        "operation": "write",
+        "bytes": 6791,
+        "sha256": "76c937bd9971c08a43cda5b640f10671e5e5ce7a57b1263c926e1ac8ffef5cd6"
+      },
+      {
+        "path": "src/core-api/Services/FungaEventReader.cs",
+        "operation": "write",
+        "bytes": 13373,
+        "sha256": "2454c6f04a5b10be3fdcd4df7d38898345f6ab3ef53332a103a40b2536a9b8af"
+      },
+      {
+        "path": "src/core-api/Services/FungaService.cs",
+        "operation": "write",
+        "bytes": 19356,
+        "sha256": "4317d2ba08565d3e1048dc29894b1c2bb76f10853df6d45afe10c6e346742f92"
+      },
+      {
+        "path": "src/core-api/Services/IFungaService.cs",
+        "operation": "write",
+        "bytes": 11621,
+        "sha256": "63e47211529483c7d71495adb33f5f3c4b34fbf6bbff7780ab680272a9fd7d19"
+      },
+      {
+        "path": "src/core-api/Services/IWorkflowService.cs",
+        "operation": "write",
+        "bytes": 2569,
+        "sha256": "d01a1ce82ca16dd098b08b2e4ba65fa77462adf74ca2ec1f6442ea0a3ac5c4d9"
+      },
+      {
+        "path": "src/core-api/Services/WorkflowService.cs",
+        "operation": "write",
+        "bytes": 2685,
+        "sha256": "aa37a456b737c35392faa61b0ed2d5184ff51df9b49c79ee631559ae46561fc3"
+      },
+      {
+        "path": "tests/FungaFilterRegression/CosmosFixture.cs",
+        "operation": "write",
+        "bytes": 7093,
+        "sha256": "84329e64be96d7768e20f939a2ace06dc9b406a302f494e28ae5565592af67bc"
+      },
+      {
+        "path": "tests/FungaFilterRegression/FungaFilterRegression.csproj",
+        "operation": "write",
+        "bytes": 1100,
+        "sha256": "70702521e1d45af240f81087c9f337e38864fb57862c10e03ec3579910184318"
+      },
+      {
+        "path": "tests/FungaFilterRegression/NuGet.Config",
+        "operation": "write",
+        "bytes": 113,
+        "sha256": "2142cfb2dfa2c7feefbe40fabcc68b0dfecadafa99a1db9b70239d977cf2a7ef"
+      },
+      {
+        "path": "tests/FungaFilterRegression/Program.cs",
+        "operation": "write",
+        "bytes": 17295,
+        "sha256": "d1710420516af84412b4d738bdc383bc46a045e6762af2577c24dda3e4bad920"
+      },
+      {
+        "path": "tests/WorkflowUnavailableRegression/NuGet.Config",
+        "operation": "write",
+        "bytes": 125,
+        "sha256": "5256a7e3e07d2c5c94f7a1e6c45f39aab011c659c5e2d53e452dea525ce04575"
+      },
+      {
+        "path": "tests/WorkflowUnavailableRegression/Program.cs",
+        "operation": "write",
+        "bytes": 7642,
+        "sha256": "786f68972f6abe934da4bfc327b2b147f1dfb491a850f035bfc8c3a2b5e722dc"
+      },
+      {
+        "path": "tests/WorkflowUnavailableRegression/WorkflowUnavailableRegression.csproj",
+        "operation": "write",
+        "bytes": 775,
+        "sha256": "7332c4f77e8e8103bf011b97ca4b5ee2b418363f92fcd2453b9b5aa5d98f137f"
+      }
+    ],
+    "overlay": [
+      "docs/checkpoints/oct01-2026/README.md",
+      "docs/checkpoints/oct01-2026/source-manifest.json"
+    ]
+  },
+  "excludedPaths": [],
+  "reviewFlags": [],
+  "validation": {
+    "tests": "not run",
+    "integration": "incomplete",
+    "releaseQualification": "incomplete"
+  },
+  "purpose": "local source preservation checkpoint only; no merge, publication, or deployment"
+}

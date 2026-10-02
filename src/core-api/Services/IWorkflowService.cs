@@ -61,7 +61,8 @@ public class WorkflowExecutionResult
     public string ExecutionId { get; set; } = string.Empty;
     public bool Success { get; set; }
     public string? Message { get; set; }
-    public DateTime CompletedAt { get; set; }
+    /// <summary>Null when no execution completed.</summary>
+    public DateTime? CompletedAt { get; set; }
 }
 
 /// <summary>
