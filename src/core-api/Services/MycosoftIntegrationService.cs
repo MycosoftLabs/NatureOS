@@ -112,20 +112,29 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
         {
             _logger.LogInformation("Processing MYCA query for user {UserId}", userId);
 
-            // This would integrate with the actual MYCA AI system
-            // For now, we'll provide intelligent context-aware responses
-            var response = await GenerateContextAwareResponse(enhancedQuery);
+            var mycaApiUrl = Environment.GetEnvironmentVariable("MYCA_API_URL");
 
-            // Log interaction for learning
+            MycaResponse response;
+            if (!string.IsNullOrWhiteSpace(mycaApiUrl))
+            {
+                response = await CallLiveMycaAsync(mycaApiUrl, enhancedQuery, userId);
+            }
+            else
+            {
+                _logger.LogInformation("MYCA_API_URL not configured — returning synthetic fallback");
+                response = await GenerateContextAwareResponse(enhancedQuery);
+                response.Synthetic = true;
+            }
+
             await LogMycaInteraction(userId, enhancedQuery, response);
 
-            // Broadcast MYCA activity (anonymized)
             await _hubContext.Clients.Group("MycaUsers").SendAsync("MycaResponse", new
             {
                 ResponseLength = response.Answer.Length,
                 Confidence = response.Confidence,
                 Timestamp = DateTime.UtcNow,
-                HasSuggestions = response.SuggestedQuestions?.Length > 0
+                HasSuggestions = response.SuggestedQuestions?.Length > 0,
+                Synthetic = response.Synthetic
             });
 
             return response;
@@ -139,6 +148,7 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
                 Answer = "I apologize, but I'm experiencing technical difficulties. Please try your question again in a moment.",
                 Confidence = 0.0,
                 Timestamp = DateTime.UtcNow,
+                Synthetic = true,
                 SuggestedQuestions = new[]
                 {
                     "What's the current system status?",
@@ -147,6 +157,43 @@ public class MycosoftIntegrationService : IMycosoftIntegrationService
                 }
             };
         }
+    }
+
+    private async Task<MycaResponse> CallLiveMycaAsync(string mycaApiUrl, string query, string userId)
+    {
+        var url = $"{mycaApiUrl.TrimEnd('/')}/query";
+        var payload = new { query, userId };
+
+        var content = new StringContent(
+            JsonSerializer.Serialize(payload),
+            System.Text.Encoding.UTF8,
+            "application/json");
+
+        var httpResponse = await _httpClient.PostAsync(url, content);
+
+        if (!httpResponse.IsSuccessStatusCode)
+        {
+            _logger.LogWarning("Live MYCA returned {Status}, falling back to synthetic",
+                (int)httpResponse.StatusCode);
+            var fallback = await GenerateContextAwareResponse(query);
+            fallback.Synthetic = true;
+            return fallback;
+        }
+
+        var body = await httpResponse.Content.ReadAsStringAsync();
+        var parsed = JsonSerializer.Deserialize<MycaResponse>(body,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+        if (parsed == null)
+        {
+            var fallback = await GenerateContextAwareResponse(query);
+            fallback.Synthetic = true;
+            return fallback;
+        }
+
+        parsed.Synthetic = false;
+        parsed.Timestamp = DateTime.UtcNow;
+        return parsed;
     }
 
     /// <summary>
@@ -611,6 +658,7 @@ public class MycaResponse
     public double Confidence { get; set; }
     public DateTime Timestamp { get; set; }
     public string[]? SuggestedQuestions { get; set; }
+    public bool Synthetic { get; set; }
 }
 
 public class HplSimulationResult

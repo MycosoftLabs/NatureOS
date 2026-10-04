@@ -74,4 +74,41 @@ public class MasIngestionService : IMasIngestionService
             return false;
         }
     }
+
+    public async Task<MasHealthResult> CheckHealthAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var database = _cosmosClient.GetDatabase("mindex");
+            var container = database.GetContainer("mas_context");
+
+            var query = new QueryDefinition("SELECT VALUE COUNT(1) FROM c");
+            var iterator = container.GetItemQueryIterator<long>(query,
+                requestOptions: new QueryRequestOptions { MaxItemCount = 1 });
+
+            long count = 0;
+            if (iterator.HasMoreResults)
+            {
+                var response = await iterator.ReadNextAsync(cancellationToken);
+                count = response.FirstOrDefault();
+            }
+
+            return new MasHealthResult
+            {
+                Healthy = true,
+                Status = "Healthy",
+                Detail = $"mas_context reachable, {count} document(s)"
+            };
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "MAS health check failed");
+            return new MasHealthResult
+            {
+                Healthy = false,
+                Status = "Unhealthy",
+                Detail = ex.Message
+            };
+        }
+    }
 }

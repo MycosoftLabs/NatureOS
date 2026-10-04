@@ -102,6 +102,8 @@ public class MasDevicesController : ControllerBase
             var mycoDevice = await _mycoBrainService.GetDeviceAsync(deviceId, cancellationToken);
             if (mycoDevice == null)
                 return NotFound(new { error = "device_not_found" });
+
+            device = MapMycoBrainDevice(mycoDevice);
         }
 
         device.Metadata ??= new Dictionary<string, object>();
