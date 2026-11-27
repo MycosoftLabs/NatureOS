@@ -1,3 +1,4 @@
+// AWS topology correction 2026-11-27: production is AWS-only; this file's legacy on-prem references are not deployment authority. See AWS_INFRA_REFERENCE.md for its replacement and disposition. Loopback development and physical-device fixtures are separate.
 using System.Text;
 using System.Text.Json;
 
@@ -27,7 +28,7 @@ public sealed class DeepAgentEventService
         if (string.Equals(hooksEnabled, "false", StringComparison.OrdinalIgnoreCase))
             return;
 
-        var masBase = (Environment.GetEnvironmentVariable("MAS_API_URL") ?? "http://192.168.0.188:8001").TrimEnd('/');
+        var masBase = (Environment.GetEnvironmentVariable("MAS_API_URL") ?? "http://mas-internal.mycosoft.com:8001").TrimEnd('/');
         var payload = new
         {
             domain,

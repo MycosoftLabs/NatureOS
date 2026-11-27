@@ -1,3 +1,4 @@
+// AWS topology correction 2026-11-27: production is AWS-only; this file's legacy on-prem references are not deployment authority. See AWS_INFRA_REFERENCE.md for its replacement and disposition. Loopback development and physical-device fixtures are separate.
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Azure.Cosmos;
 using Microsoft.ApplicationInsights.Extensibility;
@@ -26,7 +27,7 @@ builder.Services.AddSwaggerGen();
 
 // Add CORS — restrict to known Mycosoft origins
 var allowedOrigins = (Environment.GetEnvironmentVariable("CORS_ORIGINS") ??
-    "http://localhost:3000,http://192.168.0.187:3000,http://192.168.0.188:8001,http://192.168.0.189:8000,https://sandbox.mycosoft.com,https://mycosoft.com")
+    "http://localhost:3000,https://sandbox.mycosoft.com,https://mycosoft.com")
     .Split(',', StringSplitOptions.RemoveEmptyEntries);
 
 builder.Services.AddCors(options =>
