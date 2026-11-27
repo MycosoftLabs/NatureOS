@@ -1,3 +1,5 @@
+> AWS topology correction 2026-11-27: local production servers, LAN addresses and VM/Proxmox/NAS deployment instructions are retired. Use [AWS_INFRA_REFERENCE.md](../AWS_INFRA_REFERENCE.md). Preserve historical evidence and optional device/external connectors.
+
 # 2026-01-31 NatureOS Integration Master Plan (Website, MINDEX, MAS, MycoBrain)
 
 ## Purpose

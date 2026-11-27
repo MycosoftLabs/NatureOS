@@ -1,3 +1,4 @@
+// AWS topology correction 2026-11-27: production is AWS-only; this file's legacy on-prem references are not deployment authority. See AWS_INFRA_REFERENCE.md for its replacement and disposition. Loopback development and physical-device fixtures are separate.
 using Azure.Messaging.EventGrid;
 using Azure.Messaging.ServiceBus;
 using Microsoft.AspNetCore.SignalR;
@@ -136,7 +137,7 @@ public class MycoBrainService : IMycoBrainService
             if (string.IsNullOrWhiteSpace(deviceId) || string.IsNullOrWhiteSpace(msgId) || seq < 0)
                 return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, Message = "Invalid envelope: missing deviceId/msgId/seq" };
 
-            var mindexUrl = (Environment.GetEnvironmentVariable("MINDEX_API_URL") ?? "http://192.168.0.189:8000").TrimEnd('/');
+            var mindexUrl = (Environment.GetEnvironmentVariable("MINDEX_API_URL") ?? "http://mindex-internal.mycosoft.com:8000").TrimEnd('/');
             var mindexApiKey = Environment.GetEnvironmentVariable("MINDEX_API_KEY") ?? "";
             if (string.IsNullOrWhiteSpace(mindexApiKey))
                 return new ProcessingResult { Success = false, Timestamp = DateTime.UtcNow, Message = "MINDEX_API_KEY not configured" };
